@@ -34,13 +34,6 @@
       "source": "./plugins/path-guard",
       "version": "0.1.0",
       "category": "security"
-    },
-    {
-      "name": "atomic-bridge",
-      "description": "Detects the Atomic workflow engine and bridges it to omp sessions. Injects workflow awareness into the system prompt when .atomic/ directory is present.",
-      "source": "./plugins/atomic-bridge",
-      "version": "0.1.0",
-      "category": "infrastructure"
     }
   ]
 }
