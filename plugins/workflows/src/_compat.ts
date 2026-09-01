@@ -15,15 +15,19 @@ export {
   AgentSession,
   SessionManager,
   getAgentDir,
-  keyText,
   keyHint,
   rawKeyHint,
 } from "@oh-my-pi/pi-coding-agent";
 
-// CreateAgentSessionOptions re-exported as type
-export type {
-  CreateAgentSessionOptions,
-} from "@oh-my-pi/pi-coding-agent";
+export type { AgentSession as _AgentSessionType } from "@oh-my-pi/pi-coding-agent";
+
+// ── Stubs for symbols not exported by @oh-my-pi/pi-coding-agent ───────────────
+
+export function keyText(_keybinding: string): string {
+  return "";
+}
+
+export type CreateAgentSessionOptions = Record<string, unknown>;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
