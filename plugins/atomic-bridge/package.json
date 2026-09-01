@@ -1,0 +1,10 @@
+{
+  "name": "atomic-bridge",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Detects Atomic workflow engine and bridges it to omp sessions via system prompt injection.",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./index.js"]
+  }
+}

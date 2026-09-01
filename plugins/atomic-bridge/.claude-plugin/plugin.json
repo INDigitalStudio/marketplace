@@ -1,0 +1,9 @@
+{
+  "name": "atomic-bridge",
+  "description": "Detects Atomic workflow engine and bridges it to omp sessions.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/INDigitalStudio"
+  }
+}
