@@ -23,8 +23,38 @@ export type { AgentSession as _AgentSessionType } from "@oh-my-pi/pi-coding-agen
 
 // ── Stubs for symbols not exported by @oh-my-pi/pi-coding-agent ───────────────
 
-export function keyText(_keybinding: string): string {
-  return "";
+// keyText: ported from Atomic's keybinding-hints.ts. Resolves a keybinding
+// action name (e.g. "tui.select.confirm") to display text via getKeybindings().
+import { getKeybindings } from "@earendil-works/pi-tui";
+
+const MODIFIER_LABELS: Record<string, string> = {
+  ctrl: "ctrl", control: "ctrl", cmd: "cmd", command: "cmd",
+  shift: "shift", alt: "alt", option: "alt", meta: "meta",
+};
+const SPECIAL_KEY_LABELS: Record<string, string> = {
+  enter: "enter", return: "enter", esc: "esc", escape: "esc",
+  space: "space", tab: "tab", backspace: "backspace",
+  delete: "delete", del: "delete", up: "up", down: "down",
+  left: "left", right: "right", home: "home", end: "end",
+  pageup: "pageup", pagedown: "pagedown",
+};
+function formatKeyPart(part: string): string {
+  const lower = part.toLowerCase();
+  const modifier = MODIFIER_LABELS[lower];
+  if (modifier) return modifier;
+  const special = SPECIAL_KEY_LABELS[lower];
+  if (special) return special;
+  if (/^f\d+$/i.test(part)) return lower;
+  if (/^[a-z]$/i.test(part)) return lower;
+  return lower;
+}
+function formatKeyText(key: string): string {
+  return key.split("/").map(k => k.split("+").map(formatKeyPart).join("+")).join("/");
+}
+export function keyText(keybinding: string): string {
+  const keys = getKeybindings().getKeys(keybinding);
+  if (!keys || keys.length === 0) return "";
+  return formatKeyText(keys.join("/"));
 }
 
 export type CreateAgentSessionOptions = Record<string, unknown>;
