@@ -1,0 +1,120 @@
+import { createStructuredOutputTool, type StructuredOutputCapture } from "../../_compat.js";
+import type { Static, TSchema } from "typebox";
+import type { StageOptions } from "../../shared/types.js";
+
+export const STRUCTURED_OUTPUT_MAX_CORRECTIVE_PROMPTS = 3;
+export const STRUCTURED_OUTPUT_MISSING_ERROR =
+	"atomic-workflows: stage configured with schema must finish by calling structured_output.";
+
+const STRUCTURED_OUTPUT_TOOL_NAME = "structured_output";
+
+export interface StructuredOutputExecutionSnapshot<TValue> {
+	readonly toolCallId: string;
+	readonly value: TValue;
+}
+
+export interface StructuredOutputExecutionCapture<TValue> {
+	snapshot?: StructuredOutputExecutionSnapshot<TValue>;
+}
+
+type ToolResultContentBlock = {
+	readonly type?: unknown;
+	readonly text?: unknown;
+};
+
+function toolResultText(content: unknown): string | undefined {
+	if (!Array.isArray(content)) return undefined;
+	const text = content
+		.map((block: ToolResultContentBlock) =>
+			block.type === "text" && typeof block.text === "string" ? block.text : "",
+		)
+		.join("\n")
+		.trim();
+	return text.length > 0 ? text : undefined;
+}
+
+export function structuredOutputToolErrorFromEvent(event: unknown): string | undefined {
+	if (event === null || typeof event !== "object") return undefined;
+	const record = event as Record<string, unknown>;
+	if (record.type !== "tool_execution_end") return undefined;
+	if (record.toolName !== STRUCTURED_OUTPUT_TOOL_NAME) return undefined;
+	const result = record.result;
+	const resultRecord = result !== null && typeof result === "object" ? (result as Record<string, unknown>) : undefined;
+	const isError = record.isError === true || resultRecord?.isError === true;
+	if (!isError) return undefined;
+	return toolResultText(resultRecord?.content) ?? "structured_output tool call failed schema validation.";
+}
+
+export function formatStructuredOutputCorrectionPrompt(
+	error: string,
+	attempt: number,
+	needsArtifactText = false,
+): string {
+	return [
+		"The previous response failed this stage's structured-output contract.",
+		"",
+		`Corrective attempt ${attempt}/${STRUCTURED_OUTPUT_MAX_CORRECTIVE_PROMPTS}.`,
+		"",
+		"Error:",
+		error,
+		"",
+		"You must finish by calling the `structured_output` tool exactly once with arguments matching the registered schema.",
+		"If you attempted `structured_output` and validation failed, correct the tool arguments and call `structured_output` again.",
+		needsArtifactText
+			? "In the same final assistant message, include the complete human-readable artifact as ordinary text before calling `structured_output`; the tool arguments are the separate machine-readable result. Do not put prose after the tool call, and do not write the artifact as plain JSON text or Markdown code."
+			: "Do not answer with plain JSON text, Markdown, or prose.",
+	].join("\n");
+}
+
+export function stringifyStructuredOutputValue(value: unknown): string {
+	try {
+		return JSON.stringify(value, null, 2);
+	} catch (error) {
+		throw new Error(
+			`atomic-workflows: structured_output returned a non-serializable value: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+}
+
+export function stageOptionsWithStructuredOutput<TSchemaDef extends TSchema>(
+	options: StageOptions<TSchemaDef | undefined> | undefined,
+	capture: StructuredOutputCapture<Static<TSchemaDef>> | undefined,
+	executionCapture?: StructuredOutputExecutionCapture<Static<TSchemaDef>>,
+): StageOptions | undefined {
+	if (!options?.schema || !capture) return options;
+	const structuredOutputTool = createStructuredOutputTool({
+		schema: options.schema,
+		capture,
+	});
+	const executeStructuredOutput = structuredOutputTool.execute;
+	const capturedStructuredOutputTool = {
+		...structuredOutputTool,
+		async execute(...args: Parameters<typeof executeStructuredOutput>) {
+			const result = await executeStructuredOutput(...args);
+			// Mirror the shared capture, which keeps the latest successful call:
+			// a model-fallback session recreation can execute the tool a second
+			// time, and the snapshot must describe the call the live session (and
+			// its messages) actually holds, not an abandoned earlier one.
+			if (executionCapture !== undefined && capture.called) {
+				executionCapture.snapshot = {
+					toolCallId: args[0],
+					value: args[1],
+				};
+			}
+			return result;
+		},
+	};
+	const tools =
+		options.tools === undefined
+			? options.noTools === "all"
+				? [STRUCTURED_OUTPUT_TOOL_NAME]
+				: undefined
+			: Array.from(new Set([...options.tools, STRUCTURED_OUTPUT_TOOL_NAME]));
+	const excludedTools = options.excludedTools?.filter((toolName) => toolName !== STRUCTURED_OUTPUT_TOOL_NAME);
+	return {
+		...options,
+		...(tools !== undefined ? { tools } : {}),
+		...(excludedTools !== undefined ? { excludedTools } : {}),
+		customTools: [...(options.customTools ?? []), capturedStructuredOutputTool],
+	};
+}

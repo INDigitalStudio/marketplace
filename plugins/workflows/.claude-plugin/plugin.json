@@ -1,0 +1,7 @@
+{
+  "name": "workflows",
+  "description": "Atomic workflow engine for omp — multi-stage agent orchestration",
+  "author": {
+    "name": "INDigitalStudio"
+  }
+}
