@@ -1,0 +1,10 @@
+{
+  "name": "path-guard",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tool-call guard enforcing path-access-control rules from rules/path-access-control.md.",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./path-guard.js"]
+  }
+}

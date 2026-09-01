@@ -1,0 +1,8 @@
+{
+  "name": "sample-skill",
+  "description": "A sample skill demonstrating the marketplace plugin structure. Greets the user with a friendly message.",
+  "author": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/indigitalstudio"
+  }
+}

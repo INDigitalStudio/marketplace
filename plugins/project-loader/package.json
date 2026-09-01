@@ -1,0 +1,10 @@
+{
+  "name": "project-loader",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Global bootstrap that loads project-local .js extensions from <cwd>/.omp/extensions/ on session start.",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./project-loader.js"]
+  }
+}

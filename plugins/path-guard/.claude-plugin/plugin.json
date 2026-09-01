@@ -1,0 +1,8 @@
+{
+  "name": "path-guard",
+  "description": "Global extension that enforces path-access-control rules. Auto-creates rules/path-access-control.md template on session start if missing. Blocks writes outside allowed paths.",
+  "author": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/indigitalstudio"
+  }
+}

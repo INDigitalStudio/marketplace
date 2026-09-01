@@ -1,0 +1,10 @@
+{
+  "name": "git-sync",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Session-start git pull --rebase with stash preservation.",
+  "license": "MIT",
+  "pi": {
+    "extensions": ["./git-sync.js"]
+  }
+}

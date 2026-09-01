@@ -1,0 +1,8 @@
+{
+  "name": "git-sync",
+  "description": "Session-start git pull --rebase with stash preservation. Auto-syncs the repo when an omp session begins.",
+  "author": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/indigitalstudio"
+  }
+}

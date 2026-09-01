@@ -1,0 +1,39 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "indigitalstudio-marketplace",
+  "description": "Indigital Studio marketplace for omp skills, plugins, and extensions.",
+  "owner": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/indigitalstudio"
+  },
+  "plugins": [
+    {
+      "name": "sample-skill",
+      "description": "A sample skill demonstrating the marketplace plugin structure. Greets the user with a friendly message.",
+      "source": "./plugins/sample-skill",
+      "version": "0.1.0",
+      "category": "productivity"
+    },
+    {
+      "name": "project-loader",
+      "description": "Global bootstrap that loads project-local .js extensions from <cwd>/.omp/extensions/ on session start.",
+      "source": "./plugins/project-loader",
+      "version": "0.1.0",
+      "category": "infrastructure"
+    },
+    {
+      "name": "git-sync",
+      "description": "Session-start git pull --rebase with stash preservation. Auto-syncs the repo when an omp session begins.",
+      "source": "./plugins/git-sync",
+      "version": "0.1.0",
+      "category": "productivity"
+    },
+    {
+      "name": "path-guard",
+      "description": "Global extension enforcing path-access-control rules. Auto-creates rules/path-access-control.md template on session start if missing. Blocks writes outside allowed paths.",
+      "source": "./plugins/path-guard",
+      "version": "0.1.0",
+      "category": "security"
+    }
+  ]
+}

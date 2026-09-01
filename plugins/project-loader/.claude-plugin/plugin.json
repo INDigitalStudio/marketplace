@@ -1,0 +1,8 @@
+{
+  "name": "project-loader",
+  "description": "Global bootstrap that loads project-local .js extensions from <cwd>/.omp/extensions/ on session start. Enables extensions to travel with git.",
+  "author": {
+    "name": "Indigital Studio",
+    "url": "https://github.com/indigitalstudio"
+  }
+}
