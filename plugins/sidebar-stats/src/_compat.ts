@@ -1,5 +1,5 @@
 /**
- * Compatibility layer for sidebar-stats (ported from Sidebar Stats by michaelmjhhhh).
+ * Compatibility layer for sidebar-stats (ported from Pi Atelier by michaelmjhhhh).
  *
  * Re-exports what @oh-my-pi/pi-coding-agent provides, and stubs the symbols
  * it doesn't so the ported source compiles without the original
