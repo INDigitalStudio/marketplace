@@ -1,0 +1,14 @@
+{
+  "name": "sidebar-stats",
+  "version": "0.10.0",
+  "type": "module",
+  "pi": {
+    "extensions": ["./index.js"]
+  },
+  "dependencies": {
+    "@earendil-works/pi-tui": "^0.84.3",
+    "@oh-my-pi/pi-coding-agent": "^18.0.4"
+  },
+  "license": "MIT",
+  "author": "michaelmjhhhh (original), Indigital Studio (omp adaptation)"
+}

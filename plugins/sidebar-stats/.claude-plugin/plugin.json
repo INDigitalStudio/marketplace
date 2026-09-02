@@ -1,0 +1,8 @@
+{
+  "name": "sidebar-stats",
+  "description": "Responsive status rail and activity sidebar — adapted from Pi Atelier by michaelmjhhhh. Shows live agent, tool, context, workspace, usage, and TODO information.",
+  "author": {
+    "name": "michaelmjhhhh (original) / Indigital Studio (adaptation)",
+    "url": "https://github.com/michaelmjhhhh/pi-atelier"
+  }
+}
