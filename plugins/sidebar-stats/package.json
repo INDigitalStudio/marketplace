@@ -6,6 +6,7 @@
     "extensions": ["./index.js"]
   },
   "dependencies": {
+    "jiti": "^2.7.0",
     "@earendil-works/pi-tui": "^0.84.3",
     "@oh-my-pi/pi-coding-agent": "^18.0.4"
   },
