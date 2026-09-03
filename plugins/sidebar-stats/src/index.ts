@@ -522,38 +522,14 @@ export default function sidebarStatsExtension(
 
 	const commandHandler = async (args: string, ctx: any): Promise<void> => {
 		const parts = args.trim().toLowerCase().split(/\s+/).filter(Boolean);
-		const [action, sidebarAction, ...extra] = parts;
-		if (action === "display") {
-			ctx.ui.notify("Display settings are available in TUI mode via the sidebar overlay.", "info");
-			return;
-		}
-		if (action === "sidebar") {
-			if (ctx.mode !== "tui") {
-				ctx.ui.notify("Sidebar Stats sidebar requires TUI mode", "warning");
-				return;
-			}
-			if (sidebarAction === "tools") {
-				const [toolAction, ...toolExtra] = extra;
-				if (
-					toolExtra.length > 0 ||
-					(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
-				) {
-					ctx.ui.notify("Usage: /sidebar-stats sidebar tools [on|off]", "warning");
-					return;
-				}
-				const current = getActiveSession(ctx);
-				if (!current) {
-					ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-					return;
-				}
-				await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
-				return;
-			}
+		const [action, ...extra] = parts;
+		if (action === "tools") {
+			const [toolAction, ...toolExtra] = extra;
 			if (
-				extra.length > 0 ||
-				(sidebarAction !== undefined && sidebarAction !== "on" && sidebarAction !== "off")
+				toolExtra.length > 0 ||
+				(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
 			) {
-				ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
+				ctx.ui.notify("Usage: /sidebar tools [on|off]", "warning");
 				return;
 			}
 			const current = getActiveSession(ctx);
@@ -561,9 +537,34 @@ export default function sidebarStatsExtension(
 				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
 				return;
 			}
-			if (sidebarAction === "on") current.sidebar.show();
-			else if (sidebarAction === "off") current.sidebar.hide();
-			else current.sidebar.toggle();
+			await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
+			return;
+		}
+		if (action === "on" || action === "off") {
+			if (extra.length > 0) {
+				ctx.ui.notify("Usage: /sidebar [on|off]", "warning");
+				return;
+			}
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			if (action === "on") current.sidebar.show();
+			else current.sidebar.hide();
+			return;
+		}
+		if (action === undefined || action === "toggle") {
+			if (extra.length > 0) {
+				ctx.ui.notify("Usage: /sidebar [on|off|toggle|tools|status|enable|disable]", "warning");
+				return;
+			}
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			current.sidebar.toggle();
 			return;
 		}
 		if (action === "disable") {
@@ -603,15 +604,15 @@ export default function sidebarStatsExtension(
 			return;
 		}
 		ctx.ui.notify(
-			"Sidebar Stats commands: sidebar [on|off], sidebar tools [on|off], status, enable, disable", "info",
+			"Sidebar commands: /sidebar [on|off|toggle], tools [on|off], status, enable, disable", "info",
 		);
 	};
 
 
-	pi.registerCommand?.("sidebar-stats", {
-		description: "Open or control the Sidebar Stats status menu",
-		handler: commandHandler,
-	});
+pi.registerCommand?.("sidebar", {
+	description: "Open or control the Sidebar Stats status menu",
+	handler: commandHandler,
+});
 
 	// Fallback: if registerCommand is unavailable, intercept input events directly
 	if (typeof pi.on === "function") {
@@ -622,7 +623,7 @@ export default function sidebarStatsExtension(
 			if (!trimmed.startsWith("/")) return undefined;
 			const firstSpace = trimmed.indexOf(" ");
 			const name = firstSpace === -1 ? trimmed.slice(1) : trimmed.slice(1, firstSpace);
-			if (name !== "sidebar-stats") return undefined;
+			if (name !== "sidebar") return undefined;
 			const args = firstSpace === -1 ? "" : trimmed.slice(firstSpace + 1);
 			const commandCtx = ctx;
 			try {
@@ -630,7 +631,7 @@ export default function sidebarStatsExtension(
 			} catch (err) {
 				if (commandCtx.hasUI === false) throw err;
 				const message = err instanceof Error ? err.message : String(err);
-				commandCtx.ui.notify(`/sidebar-stats failed: ${message}`, "error");
+			commandCtx.ui.notify(`/sidebar failed: ${message}`, "error");
 			}
 		return { handled: true };
 		});
