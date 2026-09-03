@@ -7,6 +7,8 @@ import {
 	getAgentDir,
 	SettingsManager,
 } from "./_compat.js";
+import { type ExtensionAgentSession, getSidePaneUI } from "./side-pane-api.js";
+import { renderAgentPanelRows, AGENT_PANEL_TITLE } from "./agent-rows.js";
 import type { KeyId } from "./_compat.js";
 import {
 	type CompletionNotification,
@@ -37,12 +39,7 @@ import {
 	type SidebarPanelRegistry,
 } from "./sidebar-panels.js";
 import { SidebarRuntime, createInertSidebarState } from "./state.js";
-import type {
-	SidebarConfig,
-	SidebarState,
-	FooterState,
-	NormalizedTodo,
-} from "./types.js";
+import type { SidebarConfig, SidebarState, FooterState, NormalizedTodo } from "./types.js";
 
 export type {
 	SidebarPanelContribution,
@@ -112,6 +109,8 @@ interface ActiveSession {
 	readonly retiredConfig: SidebarConfig;
 	readonly retiredCwd: string;
 	readonly overlayCancellations: Set<() => void>;
+	agentSessions: readonly ExtensionAgentSession[];
+	unsubscribeAgentSessions: (() => void) | undefined;
 	footerDisposer: (() => void) | undefined;
 	footerGeneration: number;
 	retired: boolean;
@@ -127,10 +126,7 @@ interface LifecycleToken {
 	readonly id: number;
 }
 
-export default function sidebarStatsExtension(
-	pi: ExtensionAPI,
-	dependencies: SidebarExtensionDependencies = {},
-): void {
+export default function sidebarStatsExtension(pi: ExtensionAPI, dependencies: SidebarExtensionDependencies = {}): void {
 	const _loadConfig = dependencies.loadConfig ?? loadConfig;
 	const saveConfigPatch = dependencies.saveConfigPatch ?? saveUserConfigPatch;
 	const noopRender = (): void => undefined;
@@ -210,10 +206,7 @@ export default function sidebarStatsExtension(
 		const phases = (details as { phases: unknown }).phases;
 		if (!Array.isArray(phases)) return false;
 		return phases.every(
-			(phase) =>
-				typeof phase === "object" &&
-				phase !== null &&
-				Array.isArray((phase as { tasks: unknown }).tasks),
+			(phase) => typeof phase === "object" && phase !== null && Array.isArray((phase as { tasks: unknown }).tasks),
 		);
 	}
 
@@ -259,6 +252,7 @@ export default function sidebarStatsExtension(
 				extensionStatuses: [],
 				todos: [],
 				sidebarPanels: [],
+				agentSessions: [],
 			});
 		}
 		const { ctx, panelRegistry, runActivity, runtime } = targetSession;
@@ -278,6 +272,7 @@ export default function sidebarStatsExtension(
 			runActivity: runActivity.getSnapshot(),
 			todos: targetSession.todos,
 			sidebarPanels: panelRegistry.getAvailable(),
+			agentSessions: targetSession.agentSessions,
 		});
 	}
 
@@ -328,6 +323,7 @@ export default function sidebarStatsExtension(
 	 */
 	function disposeSession(session: ActiveSession, options: { clearFooter?: boolean } = {}): void {
 		session.retired = true;
+		session.agentSessions = [];
 		session.todos = [];
 		session.extensionStatuses = [];
 		session.askUserBlocked = false;
@@ -348,9 +344,12 @@ export default function sidebarStatsExtension(
 		cleanup(() => session.runtime.dispose());
 		cleanup(() => session.runActivity.reset());
 		cleanup(() => session.completionNotifier.reset());
-		const unsubscribe = session.unsubscribeAskUserBlocked;
+		const unsubAsk = session.unsubscribeAskUserBlocked;
 		session.unsubscribeAskUserBlocked = undefined;
-		if (unsubscribe) cleanup(unsubscribe);
+		if (unsubAsk) cleanup(unsubAsk);
+		const unsubAgents = session.unsubscribeAgentSessions;
+		session.unsubscribeAgentSessions = undefined;
+		if (unsubAgents) cleanup(unsubAgents);
 	}
 
 	function teardownActiveSession(ctx?: ExtensionContext): void {
@@ -515,10 +514,7 @@ export default function sidebarStatsExtension(
 		const [action, ...extra] = parts;
 		if (action === "tools") {
 			const [toolAction, ...toolExtra] = extra;
-			if (
-				toolExtra.length > 0 ||
-				(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
-			) {
+			if (toolExtra.length > 0 || (toolAction !== undefined && toolAction !== "on" && toolAction !== "off")) {
 				ctx.ui.notify("Usage: /sidebar tools [on|off]", "warning");
 				return;
 			}
@@ -593,16 +589,13 @@ export default function sidebarStatsExtension(
 			);
 			return;
 		}
-		ctx.ui.notify(
-			"Sidebar commands: /sidebar [on|off|toggle], tools [on|off], status, enable, disable", "info",
-		);
+		ctx.ui.notify("Sidebar commands: /sidebar [on|off|toggle], tools [on|off], status, enable, disable", "info");
 	};
 
-
-pi.registerCommand?.("sidebar", {
-	description: "Open or control the Sidebar Stats status menu",
-	handler: commandHandler,
-});
+	pi.registerCommand?.("sidebar", {
+		description: "Open or control the Sidebar Stats status menu",
+		handler: commandHandler,
+	});
 
 	// Fallback: if registerCommand is unavailable, intercept input events directly
 	if (typeof pi.on === "function") {
@@ -621,9 +614,9 @@ pi.registerCommand?.("sidebar", {
 			} catch (err) {
 				if (commandCtx.hasUI === false) throw err;
 				const message = err instanceof Error ? err.message : String(err);
-			commandCtx.ui.notify(`/sidebar failed: ${message}`, "error");
+				commandCtx.ui.notify(`/sidebar failed: ${message}`, "error");
 			}
-		return { handled: true };
+			return { handled: true };
 		});
 	}
 
@@ -693,9 +686,7 @@ pi.registerCommand?.("sidebar", {
 					enabled &&
 					activeSession?.token === initializationToken &&
 					candidateRuntime.getConfig().completionNotifications,
-				...(dependencies.notificationPlatform === undefined
-					? {}
-					: { platform: dependencies.notificationPlatform }),
+				...(dependencies.notificationPlatform === undefined ? {} : { platform: dependencies.notificationPlatform }),
 				...(dependencies.spawnNotificationProcess === undefined
 					? {}
 					: { spawn: dependencies.spawnNotificationProcess }),
@@ -709,8 +700,7 @@ pi.registerCommand?.("sidebar", {
 						throw new Error("Sidebar Stats session is not published");
 					return getSidebarSnapshot(current);
 				},
-				getConfig: () =>
-					activeSession?.token === initializationToken ? candidateRuntime.getConfig() : loaded.config,
+				getConfig: () => (activeSession?.token === initializationToken ? candidateRuntime.getConfig() : loaded.config),
 				colorEnabled: !("NO_COLOR" in process.env),
 				shouldAnimate: () => activeSession?.token === initializationToken && localRunActivity.isRunning(),
 				onWarning: (message) => initializationContext.ui.notify(message, "warning"),
@@ -719,6 +709,13 @@ pi.registerCommand?.("sidebar", {
 						`Sidebar Stats sidebar failed: ${error instanceof Error ? error.message : String(error)}`,
 						"error",
 					),
+				onToggleTools: () => {
+					const current = activeSession;
+					if (current && current.token === initializationToken) {
+						void setSidebarToolNames(initializationContext, undefined, current);
+						current.sidebar.requestRender();
+					}
+				},
 			});
 			if (!isFresh()) {
 				localSidebar.dispose();
@@ -742,6 +739,8 @@ pi.registerCommand?.("sidebar", {
 				retiredConfig: structuredClone(loaded.config),
 				retiredCwd: initializationContext.cwd,
 				overlayCancellations: new Set(),
+				agentSessions: [],
+				unsubscribeAgentSessions: undefined,
 				footerDisposer: undefined,
 				footerGeneration: 0,
 				retired: false,
@@ -779,6 +778,18 @@ pi.registerCommand?.("sidebar", {
 			activeSession = nextSession;
 			publishedSession = nextSession;
 			if (previousSession) disposeSession(previousSession, { clearFooter: true });
+
+			// Subscribe to agent session snapshots for the Subagents panel.
+			const sidePaneUI = getSidePaneUI(initializationContext.ui);
+			if (sidePaneUI) {
+				const agentToken = initializationToken;
+				nextSession.unsubscribeAgentSessions = sidePaneUI.onAgentSessionsChange((sessions) => {
+					const current = activeSession;
+					if (!current || current.token !== agentToken) return;
+					current.agentSessions = sessions;
+					current.sidebar.requestRender();
+				});
+			}
 
 			// Shortcuts, footer, and sidebar auto-show disabled in omp — they capture keyboard input.
 		} catch (error) {
@@ -876,9 +887,7 @@ pi.registerCommand?.("sidebar", {
 		current.todos = todoList;
 		const sidebarVisible = current.sidebar.isVisible();
 		if (sidebarVisible) current.sidebar.requestRender();
-		const sidebarTodoLayout = current.runtime
-			.getConfig()
-			.sidebarPanelLayout.find((entry) => entry.id === "todos");
+		const sidebarTodoLayout = current.runtime.getConfig().sidebarPanelLayout.find((entry) => entry.id === "todos");
 		if (
 			!current.runtime.getConfig().showSidebarTodos ||
 			sidebarTodoLayout?.visible === false ||
@@ -891,33 +900,33 @@ pi.registerCommand?.("sidebar", {
 			content: [{ type: "text", text: `${done}/${todoList.length} done · see sidebar` }],
 		};
 	});
-// Cast pi.on to accept event names from pi-atelier that may fire at runtime
-// even though they're not in omp's TS type definitions.
-const onEvent = pi.on.bind(pi) as unknown as (
-	event: string,
-	handler: (event: any, ctx: ExtensionContext) => void,
-) => void;
+	// Cast pi.on to accept event names from pi-atelier that may fire at runtime
+	// even though they're not in omp's TS type definitions.
+	const onEvent = pi.on.bind(pi) as unknown as (
+		event: string,
+		handler: (event: any, ctx: ExtensionContext) => void,
+	) => void;
 
-onEvent("agent_settled", (_event, ctx) => {
-	const current = getActiveSession(ctx);
-	if (!current || !ctx.isIdle()) return;
-	current.runActivity.settle();
-	current.runtime.setActivity("ready");
-	current.sidebar.requestRender();
-	current.completionNotifier.turnSettled(
-		completionNotification(current.ctx, "turn-settled", current.runActivity.getSnapshot()),
-	);
-});
+	onEvent("agent_settled", (_event, ctx) => {
+		const current = getActiveSession(ctx);
+		if (!current || !ctx.isIdle()) return;
+		current.runActivity.settle();
+		current.runtime.setActivity("ready");
+		current.sidebar.requestRender();
+		current.completionNotifier.turnSettled(
+			completionNotification(current.ctx, "turn-settled", current.runActivity.getSnapshot()),
+		);
+	});
 	pi.on("turn_end", async (_event, ctx) => {
 		const current = getActiveSession(ctx);
 		if (!current) return;
 		current.runtime.refreshUsage();
 		await current.runtime.flushWorkspacePulseRefresh();
 	});
-onEvent("model_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-onEvent("thinking_level_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-pi.on("session_compact", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-onEvent("session_info_changed", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+	onEvent("model_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+	onEvent("thinking_level_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+	pi.on("session_compact", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+	onEvent("session_info_changed", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
 	pi.on("session_shutdown", (_event, ctx) => {
 		const current = getActiveSession(ctx);
 		const initializing = initializingSessionManager;

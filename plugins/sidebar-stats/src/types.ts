@@ -16,6 +16,7 @@ export type SegmentId =
 export type Density = "comfortable" | "compact";
 export type BuiltinSidebarPanelId =
 	| "agent"
+	| "agents"
 	| "activity"
 	| "alerts"
 	| "todos"
@@ -169,6 +170,7 @@ export const DEFAULT_CONFIG: SidebarConfig = {
 	showSidebarOnStartup: true,
 	sidebarPanelLayout: [
 		{ id: "agent", visible: true },
+		{ id: "agents", visible: true },
 		{ id: "activity", visible: true },
 		{ id: "alerts", visible: true },
 		{ id: "todos", visible: true },

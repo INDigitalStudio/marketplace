@@ -40,6 +40,7 @@ export const SIDEBAR_PANEL_MAX_TRACKED_SOURCES = SIDEBAR_PANEL_MAX_PANELS;
 /** Built-in panels remain available even when their optional content is empty. */
 export const BUILTIN_SIDEBAR_PANEL_IDS = [
 	"agent",
+	"agents",
 	"activity",
 	"alerts",
 	"todos",
@@ -139,10 +140,7 @@ export interface SidebarPanelDiscoveryEvent {
 	requestId: string;
 }
 
-export type SidebarPanelEvent =
-	| SidebarPanelRegisterEvent
-	| SidebarPanelUnregisterEvent
-	| SidebarPanelDiscoveryEvent;
+export type SidebarPanelEvent = SidebarPanelRegisterEvent | SidebarPanelUnregisterEvent | SidebarPanelDiscoveryEvent;
 
 export interface SidebarPanelEventTransport {
 	on(channel: string, handler: (data: unknown) => void): () => void;
@@ -257,8 +255,7 @@ export function normalizeSidebarPanelLayout(
 	return normalized;
 }
 
-const ANSI_ESCAPE =
-	/(?:\u001b\][^\u0007]*(?:\u0007|\u001b\\)|\u001b\[[0-?]*[ -/]*[@-~]|\u009b[0-?]*[ -/]*[@-~])/g;
+const ANSI_ESCAPE = /(?:\u001b\][^\u0007]*(?:\u0007|\u001b\\)|\u001b\[[0-?]*[ -/]*[@-~]|\u009b[0-?]*[ -/]*[@-~])/g;
 
 /** Cheap precondition used before any regex sanitization or Unicode iteration. */
 export function isSidebarPanelTextWithinRawLimit(value: unknown, maxCodeUnits: number): value is string {
@@ -310,8 +307,7 @@ function sanitizeContribution(value: unknown): SanitizedSidebarPanelContribution
 		return undefined;
 	const rows: SidebarPanelRow[] = [];
 	for (const row of value.rows) {
-		const text =
-			typeof row === "string" ? row : isRecord(row) && typeof row.text === "string" ? row.text : undefined;
+		const text = typeof row === "string" ? row : isRecord(row) && typeof row.text === "string" ? row.text : undefined;
 		if (
 			text === undefined ||
 			!isSidebarPanelTextWithinRawLimit(text, SIDEBAR_PANEL_MAX_RAW_ROW_CODE_UNITS) ||
@@ -336,9 +332,7 @@ function sourceFor(id: string): string {
 }
 
 function isEvent(value: unknown): value is Record<string, unknown> {
-	return (
-		isRecord(value) && value.version === SIDEBAR_PANEL_PROTOCOL_VERSION && typeof value.type === "string"
-	);
+	return isRecord(value) && value.version === SIDEBAR_PANEL_PROTOCOL_VERSION && typeof value.type === "string";
 }
 
 // Revision numbers are part of the event protocol's per-source ordering, not
@@ -378,9 +372,7 @@ function boundedRawCodeUnits(value: string, maxCodeUnits: number): string {
 function discoveryPrefix(instanceId: unknown): string {
 	const candidate = isSidebarPanelRequestId(instanceId) ? instanceId : DEFAULT_DISCOVERY_PREFIX;
 	const maxPrefixCodeUnits =
-		SIDEBAR_PANEL_MAX_RAW_REQUEST_ID_CODE_UNITS -
-		DISCOVERY_REQUEST_SEPARATOR.length -
-		MAX_SAFE_SEQUENCE_CODE_UNITS;
+		SIDEBAR_PANEL_MAX_RAW_REQUEST_ID_CODE_UNITS - DISCOVERY_REQUEST_SEPARATOR.length - MAX_SAFE_SEQUENCE_CODE_UNITS;
 	const bounded = boundedRawCodeUnits(candidate, maxPrefixCodeUnits);
 	return isSidebarPanelRequestId(bounded) ? bounded : DEFAULT_DISCOVERY_PREFIX;
 }
@@ -393,9 +385,7 @@ function sidebarPanelDataEqual(first: SidebarPanelData, second: SidebarPanelData
 		first.available === second.available &&
 		first.source === second.source &&
 		first.rows.length === second.rows.length &&
-		first.rows.every(
-			(row, index) => row.text === second.rows[index]?.text && row.role === second.rows[index]?.role,
-		)
+		first.rows.every((row, index) => row.text === second.rows[index]?.text && row.role === second.rows[index]?.role)
 	);
 }
 
@@ -520,14 +510,20 @@ export function createSidebarPanelRegistry(options: SidebarPanelRegistryOptions 
 		getAvailable: () =>
 			[...panels.values()].map((panel) => ({
 				...panel,
-				rows: panel.rows.map((row) => ({ text: row.text, ...(row.role ? { role: row.role } : {}) })),
+				rows: panel.rows.map((row) => ({
+					text: row.text,
+					...(row.role ? { role: row.role } : {}),
+				})),
 			})),
 		get: (id) => {
 			const panel = panels.get(id);
 			return panel
 				? {
 						...panel,
-						rows: panel.rows.map((row) => ({ text: row.text, ...(row.role ? { role: row.role } : {}) })),
+						rows: panel.rows.map((row) => ({
+							text: row.text,
+							...(row.role ? { role: row.role } : {}),
+						})),
 					}
 				: undefined;
 		},
@@ -555,14 +551,11 @@ export function registerSidebarPanel(
 	const stableId: ContributedSidebarPanelId | undefined = initial?.id;
 	const requestedSource = options.source ?? (stableId ? sourceFor(stableId) : undefined);
 	const source =
-		stableId && requestedSource !== undefined && isSidebarPanelSource(requestedSource)
-			? requestedSource
-			: undefined;
+		stableId && requestedSource !== undefined && isSidebarPanelSource(requestedSource) ? requestedSource : undefined;
 	let current = source && stableId && initial ? initial : undefined;
 	let disposed = false;
 	const emitRegister = (requestId?: string): void => {
-		if (disposed || !source || !current || (requestId !== undefined && !isSidebarPanelRequestId(requestId)))
-			return;
+		if (disposed || !source || !current || (requestId !== undefined && !isSidebarPanelRequestId(requestId))) return;
 		const revision = nextSidebarPanelRevision(pi.events, source);
 		if (revision === undefined) return;
 		pi.events.emit(SIDEBAR_PANEL_EVENT_CHANNEL, {
