@@ -528,6 +528,10 @@ export default function sidebarStatsExtension(
 			return;
 		}
 		if (action === "sidebar") {
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify("Sidebar Stats sidebar requires TUI mode", "warning");
+				return;
+			}
 			if (sidebarAction === "tools") {
 				const [toolAction, ...toolExtra] = extra;
 				if (
@@ -545,15 +549,22 @@ export default function sidebarStatsExtension(
 				await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
 				return;
 			}
-		const current = getActiveSession(ctx);
-		if (!current) {
-			ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+			if (
+				extra.length > 0 ||
+				(sidebarAction !== undefined && sidebarAction !== "on" && sidebarAction !== "off")
+			) {
+				ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
+				return;
+			}
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			if (sidebarAction === "on") current.sidebar.show();
+			else if (sidebarAction === "off") current.sidebar.hide();
+			else current.sidebar.toggle();
 			return;
-		}
-		if (sidebarAction === "on") current.sidebar.show();
-		else if (sidebarAction === "off") current.sidebar.hide();
-		else current.sidebar.toggle();
-		return;
 		}
 		if (action === "disable") {
 			const current = getActiveSession(ctx);
@@ -585,23 +596,17 @@ export default function sidebarStatsExtension(
 				return;
 			}
 			const state = current.runtime.getState();
-			const config = current.runtime.getConfig();
 			ctx.ui.notify(
 				`Activity: ${state.activity} | Model: ${state.modelId ?? "—"} | Context: ${state.metrics.contextPercent ?? "—"}% | Cost: $${state.metrics.cost.toFixed(2)}`,
 				"info",
 			);
 			return;
 		}
-		const current = getActiveSession(ctx);
-		if (!current) {
-			ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-			return;
-		}
-		current.sidebar.toggle();
 		ctx.ui.notify(
-			current.sidebar.isVisible() ? "Sidebar shown" : "Sidebar hidden", "info",
+			"Sidebar Stats commands: sidebar [on|off], sidebar tools [on|off], status, enable, disable", "info",
 		);
 	};
+
 
 	pi.registerCommand?.("sidebar-stats", {
 		description: "Open or control the Sidebar Stats status menu",
