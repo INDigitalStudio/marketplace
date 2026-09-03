@@ -576,10 +576,12 @@ function todosRows(snapshot: SidebarSnapshot, palette: SidebarPalette): string[]
 		let check: string;
 		if (todo.status === "completed") check = palette.paint("ready", "✓");
 		else if (todo.status === "in_progress") check = palette.paint("warning", "◐");
+		else if (todo.status === "blocked") check = palette.paint("warning", "⚠");
+		else if (todo.status === "abandoned") check = palette.paint("dim", "✕");
 		else check = palette.paint("dim", "○");
 		const id = palette.paint("accent", `#${todo.id}`);
 		const text =
-			todo.status === "completed"
+			todo.status === "completed" || todo.status === "abandoned"
 				? palette.paint("dim", sanitize(todo.text))
 				: palette.paint("primary", sanitize(todo.text));
 		rows.push(`${check} ${id} ${text}`);

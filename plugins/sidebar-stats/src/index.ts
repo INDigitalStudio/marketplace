@@ -42,8 +42,6 @@ import type {
 	SidebarState,
 	FooterState,
 	NormalizedTodo,
-	RpivTask,
-	TodoItem,
 } from "./types.js";
 
 export type {
@@ -195,67 +193,59 @@ export default function sidebarStatsExtension(
 		targetSession.sidebar.requestRender();
 	}
 
-	const VALID_TODO_STATUSES = new Set(["pending", "in_progress", "completed"]);
+	const VALID_TODO_STATUSES = new Set(["pending", "in_progress", "completed", "abandoned", "blocked"]);
 
-	interface OldTodoDetails {
-		todos: TodoItem[];
-		nextId: number;
+	/** omp's todo tool result shape: { phases: [{ name, tasks: [{ content, status }] }] } */
+	interface OmpTodoDetails {
+		phases: Array<{ name: string; tasks: OmpTodoItem[] }>;
 	}
-	interface NewTaskDetails {
-		tasks: RpivTask[];
-		nextId: number;
+	interface OmpTodoItem {
+		content: string;
+		status: string;
 	}
 
-	function isOldTodoDetails(details: unknown): details is OldTodoDetails {
+	function isOmpTodoDetails(details: unknown): details is OmpTodoDetails {
 		if (typeof details !== "object" || details === null) return false;
-		if (!("todos" in details)) return false;
-		const todos = (details as OldTodoDetails).todos;
-		if (!Array.isArray(todos)) return false;
-		return todos.every(
-			(item) =>
-				typeof item === "object" &&
-				item !== null &&
-				typeof (item as TodoItem).id === "number" &&
-				typeof (item as TodoItem).text === "string" &&
-				typeof (item as TodoItem).done === "boolean",
+		if (!("phases" in details)) return false;
+		const phases = (details as { phases: unknown }).phases;
+		if (!Array.isArray(phases)) return false;
+		return phases.every(
+			(phase) =>
+				typeof phase === "object" &&
+				phase !== null &&
+				Array.isArray((phase as { tasks: unknown }).tasks),
 		);
 	}
 
-	function isNewTaskDetails(details: unknown): details is NewTaskDetails {
-		if (typeof details !== "object" || details === null) return false;
-		if (!("tasks" in details)) return false;
-		const tasks = (details as NewTaskDetails).tasks;
-		if (!Array.isArray(tasks)) return false;
-		return tasks.every(
-			(item) =>
-				typeof item === "object" &&
-				item !== null &&
-				typeof (item as RpivTask).id === "number" &&
-				typeof (item as RpivTask).subject === "string" &&
-				typeof (item as RpivTask).status === "string",
-		);
-	}
-
-	function normalizeTodo(item: TodoItem | RpivTask): NormalizedTodo | undefined {
-		if ("done" in item) {
-			return { id: item.id, text: item.text, status: item.done ? "completed" : "pending" };
+	/** Assign sequential IDs to flattened tasks — omp's TodoItem has no `id` field. */
+	function flattenTodoPhases(details: OmpTodoDetails, startId = 1): NormalizedTodo[] {
+		let id = startId;
+		const result: NormalizedTodo[] = [];
+		for (const phase of details.phases) {
+			for (const task of phase.tasks) {
+				if (!VALID_TODO_STATUSES.has(task.status)) continue;
+				result.push({
+					id: id++,
+					text: task.content,
+					status: task.status as NormalizedTodo["status"],
+				});
+			}
 		}
-		const status = item.status;
-		if (!VALID_TODO_STATUSES.has(status)) return undefined;
-		return { id: item.id, text: item.subject, status: status as NormalizedTodo["status"] };
+		return result;
 	}
 
 	function reconstructTodos(ctx: ExtensionContext): NormalizedTodo[] {
-		let allItems: (TodoItem | RpivTask)[] = [];
+		let result: NormalizedTodo[] = [];
 		for (const entry of ctx.sessionManager.getBranch()) {
 			if (entry.type !== "message") continue;
 			const msg = entry.message;
 			if (msg.role !== "toolResult" || msg.toolName !== "todo" || msg.isError) continue;
 			const details = msg.details;
-			if (isOldTodoDetails(details)) allItems = details.todos;
-			else if (isNewTaskDetails(details)) allItems = details.tasks;
+			if (isOmpTodoDetails(details)) {
+				result = flattenTodoPhases(details);
+			}
 		}
-		return allItems.map(normalizeTodo).filter((item): item is NormalizedTodo => item !== undefined);
+		return result;
 	}
 	function getSidebarSnapshot(targetSession: ActiveSession): SidebarSnapshot {
 		if (targetSession.retired || activeSession !== targetSession) {
@@ -880,15 +870,8 @@ pi.registerCommand?.("sidebar", {
 		if (!current || event.isError) return;
 
 		const details = event.details;
-		let rawItems: (TodoItem | RpivTask)[];
-		if (isOldTodoDetails(details)) {
-			rawItems = details.todos;
-		} else if (isNewTaskDetails(details)) {
-			rawItems = details.tasks;
-		} else {
-			return;
-		}
-		const todoList = rawItems.map(normalizeTodo).filter((item): item is NormalizedTodo => item !== undefined);
+		if (!isOmpTodoDetails(details)) return;
+		const todoList = flattenTodoPhases(details);
 		// Keep state updates independent from whether the TODO panel is currently presented.
 		current.todos = todoList;
 		const sidebarVisible = current.sidebar.isVisible();

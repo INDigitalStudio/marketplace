@@ -35,20 +35,10 @@ export type SidebarPanelLayout = SidebarPanelLayoutEntry[];
 /** Legacy menu vocabulary. Ornament is translated to Brand visibility. */
 export type Ornament = "none" | "restrained";
 export type ConfigurationSource = "product" | "user" | "project" | "session";
-export interface TodoItem {
-	id: number;
-	text: string;
-	done: boolean;
-}
-export interface RpivTask {
-	id: number;
-	subject: string;
-	status: string;
-}
 export interface NormalizedTodo {
 	id: number;
 	text: string;
-	status: "pending" | "in_progress" | "completed";
+	status: "pending" | "in_progress" | "completed" | "abandoned" | "blocked";
 }
 
 export interface SegmentLayoutEntry {
