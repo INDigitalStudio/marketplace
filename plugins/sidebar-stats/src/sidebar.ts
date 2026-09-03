@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { basename } from "node:path";
 import type { ExtensionContext } from "./_compat.js";
-import { type Component, type OverlayHandle, truncateToWidth, visibleWidth } from "./_compat.js";
+import { type Component, type OverlayFocusOwner, type OverlayHandle, truncateToWidth, visibleWidth } from "./_compat.js";
 import type { ThemeLike } from "./footer.js";
 import { aggregateMetrics, formatTokens } from "./metrics.js";
 import { type SidebarPalette, createPalette, type PaletteRole } from "./palette.js";
@@ -1103,7 +1103,7 @@ function renderSidebarError(error: unknown, width: number, height: number, resiz
 	);
 }
 
-export function createSidebarComponent(options: SidebarComponentOptions): Component {
+export function createSidebarComponent(options: SidebarComponentOptions): Component & OverlayFocusOwner {
 	return {
 		render(width) {
 			const height = options.getHeight();
@@ -1125,6 +1125,10 @@ export function createSidebarComponent(options: SidebarComponentOptions): Compon
 			}
 		},
 		invalidate() {},
+		// omp's pi-tui doesn't support nonCapturing — showOverlay steals focus.
+		// ownsOverlayFocusTarget lets setFocus() accept the editor as a valid
+		// focus target within this overlay, so onHandle can restore it.
+		ownsOverlayFocusTarget: (_component: Component) => true,
 	};
 }
 
@@ -1319,74 +1323,97 @@ export function createSidebarController(options: SidebarControllerOptions): Side
 			safely(split.hide);
 			return;
 		}
-		try {
-			const pending = options.ctx.ui.custom<void>(
-				(tui, theme, _keybindings, done) => {
-					let closed = false;
-					const close = () => {
-						if (closed) return;
-						closed = true;
-						done(undefined);
-					};
-					if (!safely(() => split.attach(tui))) {
-						enabled = false;
-						generation += 1;
-						stopAnimation();
-						clearOverlayCallbacks();
-						safely(split.hide);
-						safely(close);
-					} else {
-						splitRequestRender = () => tui.requestRender();
-						if (enabled && generation === currentGeneration) {
-							closeOverlay = close;
-							requestOverlayRender = () => tui.requestRender();
-							syncAnimation();
-						} else {
-							close();
-						}
-					}
-					return createSidebarComponent({
-						getSnapshot: binding.getSnapshot,
-						getConfig: binding.getConfig,
-						getHeight: () => tui.terminal.rows,
-						isResizing: binding.isResizing,
-						theme: theme as unknown as ThemeLike,
-						...(options.colorEnabled === undefined ? {} : { colorEnabled: options.colorEnabled }),
-					});
-				},
-				{
-					overlay: true,
-					overlayOptions: () => split.overlayOptions(),
-					onHandle: (handle) => {
-						if (enabled && generation === currentGeneration) {
-							overlayHandle = handle;
-							syncAnimation();
-						} else {
-							safely(() => handle.hide());
-						}
-					},
-				},
-			);
-			void pending
-				.catch((error: unknown) => {
-					reportError(error);
-				})
-				.finally(() => {
-					if (generation !== currentGeneration) return;
+	try {
+		// Minimal structural type bridging @oh-my-pi/pi-tui (runtime) and
+		// @earendil-works/pi-tui (types). The factory callback's tui is
+		// omp's TUI; we only need getFocused/setFocus/requestRender/terminal.
+		type FocusComponent = { handleInput?: (data: string) => void };
+		type MinimalTui = {
+			getFocused(): FocusComponent | null;
+			setFocus(component: unknown): void;
+			requestRender(): void;
+			terminal: { rows: number };
+		};
+		let overlayTui: MinimalTui | undefined;
+		let preFocus: FocusComponent | null = null;
+		const pending = options.ctx.ui.custom<void>(
+			(tui: MinimalTui, theme: unknown, _keybindings: unknown, done: (result: void) => void) => {
+				overlayTui = tui;
+				// Capture focus before showOverlay steals it.
+				preFocus = tui.getFocused();
+				let closed = false;
+				const close = () => {
+					if (closed) return;
+					closed = true;
+					done(undefined);
+				};
+				if (!safely(() => split.attach(tui as unknown as Parameters<typeof split.attach>[0]))) {
 					enabled = false;
+					generation += 1;
 					stopAnimation();
 					clearOverlayCallbacks();
 					safely(split.hide);
+					safely(close);
+				} else {
+					splitRequestRender = () => tui.requestRender();
+					if (enabled && generation === currentGeneration) {
+						closeOverlay = close;
+						requestOverlayRender = () => tui.requestRender();
+						syncAnimation();
+					} else {
+						close();
+					}
+				}
+				return createSidebarComponent({
+					getSnapshot: binding.getSnapshot,
+					getConfig: binding.getConfig,
+					getHeight: () => tui.terminal.rows,
+					isResizing: binding.isResizing,
+					theme: theme as unknown as ThemeLike,
+					...(options.colorEnabled === undefined ? {} : { colorEnabled: options.colorEnabled }),
 				});
-		} catch (error) {
-			if (generation === currentGeneration) {
+			},
+			{
+				overlay: true,
+				overlayOptions: () => split.overlayOptions(),
+				onHandle: (handle) => {
+					if (enabled && generation === currentGeneration) {
+						overlayHandle = handle as unknown as OverlayHandle;
+						syncAnimation();
+						// showOverlay stole focus to the sidebar. The sidebar
+						// component declares ownsOverlayFocusTarget so setFocus
+						// accepts preFocus (the editor) as valid. Restore it.
+						safely(() => {
+							if (overlayTui && preFocus) {
+								overlayTui.setFocus(preFocus);
+							}
+						});
+					} else {
+						safely(() => handle.hide());
+					}
+				},
+			},
+		);
+		void pending
+			.catch((error: unknown) => {
+				reportError(error);
+			})
+			.finally(() => {
+				if (generation !== currentGeneration) return;
 				enabled = false;
 				stopAnimation();
 				clearOverlayCallbacks();
 				safely(split.hide);
-			}
-			reportError(error);
+			});
+	} catch (error) {
+		if (generation === currentGeneration) {
+			enabled = false;
+			stopAnimation();
+			clearOverlayCallbacks();
+			safely(split.hide);
 		}
+		reportError(error);
+	}
 	};
 
 	return {

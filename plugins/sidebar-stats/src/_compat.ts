@@ -45,3 +45,8 @@ export function getSettingsListTheme(): Record<string, string> {
 // ── Re-exports from @earendil-works/pi-tui ───────────────────────────────────
 // Bypass omp-legacy-pi-bundled alias by re-exporting everything from the real package.
 export * from "../node_modules/@earendil-works/pi-tui/dist/index.js";
+// OverlayFocusOwner: re-exported from @oh-my-pi/pi-tui (the RUNTIME TUI).
+// @earendil-works/pi-tui doesn't have this interface, but omp's runtime TUI does.
+// The sidebar component implements it so setFocus() accepts the editor as a
+// valid focus target within the overlay, preventing input stealing.
+export type { OverlayFocusOwner } from "@oh-my-pi/pi-tui";
