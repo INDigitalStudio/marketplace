@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { basename } from "node:path";
 import type { ExtensionContext } from "./_compat.js";
-import { type Component, type OverlayFocusOwner, type OverlayHandle, truncateToWidth, visibleWidth } from "./_compat.js";
+import { type Component, type OverlayFocusOwner, type OverlayHandle, type TUI, truncateToWidth, visibleWidth } from "./_compat.js";
 import type { ThemeLike } from "./footer.js";
 import { aggregateMetrics, formatTokens } from "./metrics.js";
 import { type SidebarPalette, createPalette, type PaletteRole } from "./palette.js";
@@ -1324,30 +1324,22 @@ export function createSidebarController(options: SidebarControllerOptions): Side
 			return;
 		}
 	try {
-		// Minimal structural type bridging @oh-my-pi/pi-tui (runtime) and
-		// @earendil-works/pi-tui (types). The factory callback's tui is
-		// omp's TUI; we only need getFocused/setFocus/requestRender/terminal.
-		type FocusComponent = { handleInput?: (data: string) => void };
-		type MinimalTui = {
-			getFocused(): FocusComponent | null;
-			setFocus(component: unknown): void;
-			requestRender(): void;
-			terminal: { rows: number };
-		};
-		let overlayTui: MinimalTui | undefined;
-		let preFocus: FocusComponent | null = null;
+		let overlayTui: TUI | undefined;
+		let preFocus: Component | null = null;
 		const pending = options.ctx.ui.custom<void>(
-			(tui: MinimalTui, theme: unknown, _keybindings: unknown, done: (result: void) => void) => {
-				overlayTui = tui;
+			(tui, theme, _keybindings, done) => {
+				const t = tui as unknown as TUI;
+				overlayTui = t;
 				// Capture focus before showOverlay steals it.
-				preFocus = tui.getFocused();
+				// Runtime TUI (@oh-my-pi) has getFocused(); earendil types have getFocusedComponent().
+				preFocus = (t as unknown as { getFocused(): Component | null }).getFocused();
 				let closed = false;
 				const close = () => {
 					if (closed) return;
 					closed = true;
 					done(undefined);
 				};
-				if (!safely(() => split.attach(tui as unknown as Parameters<typeof split.attach>[0]))) {
+				if (!safely(() => split.attach(t))) {
 					enabled = false;
 					generation += 1;
 					stopAnimation();
@@ -1355,10 +1347,10 @@ export function createSidebarController(options: SidebarControllerOptions): Side
 					safely(split.hide);
 					safely(close);
 				} else {
-					splitRequestRender = () => tui.requestRender();
+					splitRequestRender = () => t.requestRender();
 					if (enabled && generation === currentGeneration) {
 						closeOverlay = close;
-						requestOverlayRender = () => tui.requestRender();
+						requestOverlayRender = () => t.requestRender();
 						syncAnimation();
 					} else {
 						close();
@@ -1367,7 +1359,7 @@ export function createSidebarController(options: SidebarControllerOptions): Side
 				return createSidebarComponent({
 					getSnapshot: binding.getSnapshot,
 					getConfig: binding.getConfig,
-					getHeight: () => tui.terminal.rows,
+					getHeight: () => t.terminal.rows,
 					isResizing: binding.isResizing,
 					theme: theme as unknown as ThemeLike,
 					...(options.colorEnabled === undefined ? {} : { colorEnabled: options.colorEnabled }),
