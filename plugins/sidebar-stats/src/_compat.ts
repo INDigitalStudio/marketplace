@@ -18,7 +18,25 @@ export type { ExtensionAPI, ExtensionContext } from "@oh-my-pi/pi-coding-agent";
 export const CONFIG_DIR_NAME = ".omp";
 
 // estimateTokens: rough character-based approximation (original uses tiktoken)
-export function estimateTokens(text: string): number {
+// Accepts AgentMessage (object) or string — serializes if needed.
+export function estimateTokens(message: unknown): number {
+	let text: string;
+	if (typeof message === "string") {
+		text = message;
+	} else if (message && typeof message === "object" && "content" in message) {
+		const content = (message as { content: unknown }).content;
+		if (Array.isArray(content)) {
+			text = content.map((c: unknown) => {
+				if (typeof c === "string") return c;
+				if (c && typeof c === "object" && "text" in c) return String((c as { text: unknown }).text);
+				return "";
+			}).join("");
+		} else {
+			text = String(content);
+		}
+	} else {
+		text = String(message ?? "");
+	}
 	return Math.round(text.length / 3.5);
 }
 
@@ -37,9 +55,15 @@ export class SettingsManager {
 // Publicly exported by @oh-my-pi/pi-coding-agent via src/index.ts:36 → modes/components → custom-editor.
 export { CustomEditor } from "@oh-my-pi/pi-coding-agent";
 // getSettingsListTheme: theme for SettingsList TUI component.
-// Omp has no equivalent; return empty theme (SettingsList uses defaults).
-export function getSettingsListTheme(): Record<string, string> {
-	return {};
+// Returns no-op theme functions matching SettingsListTheme interface.
+export function getSettingsListTheme() {
+	return {
+		label: (s: string) => s,
+		value: (s: string) => s,
+		description: (s: string) => s,
+		cursor: "▶",
+		hint: (s: string) => s,
+	};
 }
 
 // ── Re-exports from @earendil-works/pi-tui ───────────────────────────────────

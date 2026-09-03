@@ -58,7 +58,7 @@ export function frameEditorLines(
 	inner: readonly string[],
 	width: number,
 	borderColor: (text: string) => string,
-): string[] {
+): readonly string[] {
 	const safeWidth = Math.max(0, Math.trunc(width));
 	if (safeWidth < EDITOR_FRAME_MIN_WIDTH || inner.length === 0) {
 		return inner.map((line) => truncateToWidth(line, safeWidth, ""));
@@ -84,7 +84,7 @@ export function frameEditorLines(
 
 /** Pi composer with Sidebar's rounded frame. Preserves thinking-level borderColor. */
 export class SidebarEditor extends CustomEditor {
-	override render(width: number): string[] {
+	override render(width: number): readonly string[] {
 		const safeWidth = Math.max(0, Math.trunc(width));
 		if (safeWidth < EDITOR_FRAME_MIN_WIDTH) return super.render(safeWidth);
 		return frameEditorLines(super.render(safeWidth - EDITOR_FRAME_CHROME), safeWidth, this.borderColor);

@@ -632,7 +632,7 @@ export default function sidebarStatsExtension(
 				const message = err instanceof Error ? err.message : String(err);
 				commandCtx.ui.notify(`/sidebar-stats failed: ${message}`, "error");
 			}
-			return { action: "handled" };
+		return { handled: true };
 		});
 	}
 
@@ -907,26 +907,33 @@ export default function sidebarStatsExtension(
 			content: [{ type: "text", text: `${done}/${todoList.length} done · see sidebar` }],
 		};
 	});
-	pi.on("agent_settled", (_event, ctx) => {
-		const current = getActiveSession(ctx);
-		if (!current || !ctx.isIdle()) return;
-		current.runActivity.settle();
-		current.runtime.setActivity("ready");
-		current.sidebar.requestRender();
-		current.completionNotifier.turnSettled(
-			completionNotification(current.ctx, "turn-settled", current.runActivity.getSnapshot()),
-		);
-	});
+// Cast pi.on to accept event names from pi-atelier that may fire at runtime
+// even though they're not in omp's TS type definitions.
+const onEvent = pi.on as unknown as (
+	event: string,
+	handler: (event: any, ctx: ExtensionContext) => void,
+) => void;
+
+onEvent("agent_settled", (_event, ctx) => {
+	const current = getActiveSession(ctx);
+	if (!current || !ctx.isIdle()) return;
+	current.runActivity.settle();
+	current.runtime.setActivity("ready");
+	current.sidebar.requestRender();
+	current.completionNotifier.turnSettled(
+		completionNotification(current.ctx, "turn-settled", current.runActivity.getSnapshot()),
+	);
+});
 	pi.on("turn_end", async (_event, ctx) => {
 		const current = getActiveSession(ctx);
 		if (!current) return;
 		current.runtime.refreshUsage();
 		await current.runtime.flushWorkspacePulseRefresh();
 	});
-	pi.on("model_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-	pi.on("thinking_level_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-	pi.on("session_compact", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
-	pi.on("session_info_changed", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+onEvent("model_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+onEvent("thinking_level_select", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+pi.on("session_compact", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
+onEvent("session_info_changed", (_event, ctx) => getActiveSession(ctx)?.runtime.refreshUsage());
 	pi.on("session_shutdown", (_event, ctx) => {
 		const current = getActiveSession(ctx);
 		const initializing = initializingSessionManager;
