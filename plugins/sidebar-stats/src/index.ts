@@ -910,7 +910,7 @@ pi.registerCommand?.("sidebar", {
 	});
 // Cast pi.on to accept event names from pi-atelier that may fire at runtime
 // even though they're not in omp's TS type definitions.
-const onEvent = pi.on as unknown as (
+const onEvent = pi.on.bind(pi) as unknown as (
 	event: string,
 	handler: (event: any, ctx: ExtensionContext) => void,
 ) => void;
