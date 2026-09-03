@@ -1,5 +1,5 @@
 import nodePath from "node:path";
-import { truncateToWidth, visibleWidth } from "./terminal-utils.js";
+import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import { toDisplayPath } from "./display-path.js";
 import type { DisplayValue, ResponsePerformance } from "./types.js";
 
