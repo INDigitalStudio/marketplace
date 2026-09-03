@@ -569,7 +569,7 @@ function todosRows(snapshot: SidebarSnapshot, palette: SidebarPalette): string[]
 	const rows = [palette.paint("muted", `${done}/${total}`)];
 	const visible =
 		snapshot.runActivity.phase === "running"
-			? todoList.filter((todo) => todo.status === "in_progress")
+			? todoList.filter((todo) => todo.status === "in_progress" || todo.status === "blocked")
 			: todoList;
 
 	for (const todo of visible) {
