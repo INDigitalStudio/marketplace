@@ -1,4 +1,5 @@
-import { matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { matchesKey } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "./terminal-utils.js";
 import {
 	applyDisplayTemplate,
 	derivePresetIdentity,

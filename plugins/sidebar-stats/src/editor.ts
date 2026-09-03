@@ -1,10 +1,6 @@
 import { CustomEditor } from "./_compat.js";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { stripTerminalSequences, truncateToWidth, visibleWidth } from "./terminal-utils.js";
 
-/** Strip ANSI escape sequences from a string. */
-function stripTerminalSequences(line: string): string {
-	return line.replace(/\u001B\[[0-9;]*[a-zA-Z]/g, "");
-}
 /** │ + padding on each side. */
 export const EDITOR_FRAME_CHROME = 4;
 export const EDITOR_FRAME_MIN_WIDTH = 6;

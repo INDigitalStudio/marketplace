@@ -1,4 +1,5 @@
-import { type Component, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { type Component } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "./terminal-utils.js";
 import { formatTokens } from "./metrics.js";
 import { type AtelierPalette, createPalette, type PaletteRole } from "./palette.js";
 import { responsePerformanceValues } from "./run-activity.js";
