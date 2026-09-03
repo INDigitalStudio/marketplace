@@ -1,4 +1,4 @@
-import { matchesKey, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { matchesKey, truncateToWidth, visibleWidth } from "./_compat.js";
 import {
 	applyDisplayTemplate,
 	derivePresetIdentity,

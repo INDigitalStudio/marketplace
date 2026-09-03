@@ -7,7 +7,7 @@ import {
 	getAgentDir,
 	SettingsManager,
 } from "./_compat.js";
-import type { KeyId } from "@earendil-works/pi-tui";
+import type { KeyId } from "./_compat.js";
 import {
 	type CompletionNotification,
 	type CompletionNotifier,
@@ -517,62 +517,8 @@ export default function atelierExtension(
 		);
 	}
 
-	function installFooter(targetSession: ActiveSession): void {
-		const { ctx } = targetSession;
-		const token = targetSession.token;
-		const generation = ++targetSession.footerGeneration;
-		const retiredState = targetSession.retiredState;
-		const retiredConfig = targetSession.retiredConfig;
-		if (ctx.mode !== "tui") return;
-		ctx.ui.setFooter((tui, theme, footerData) => {
-			const getCurrentSession = (): ActiveSession | undefined => {
-				const current = activeSession;
-				return enabled && current?.token === token && current.footerGeneration === generation
-					? current
-					: undefined;
-			};
-			const footerRequestRender = (): void => {
-				if (getCurrentSession()) tui.requestRender();
-			};
-			const current = getCurrentSession();
-			if (current) current.requestFooterRender = footerRequestRender;
-			const component = createFooterComponent({
-				getState: (): FooterState => {
-					// A footer outliving its `setFooter(undefined)` reports detached inert state.
-					const currentSession = getCurrentSession();
-					if (!currentSession) return retiredState;
-					const branch = footerData.getGitBranch();
-					updateExtensionStatuses(currentSession, Array.from(footerData.getExtensionStatuses().values()));
-					const performance = currentSession.runActivity.getSnapshot().performance;
-					return {
-						...currentSession.runtime.getState(),
-						...(branch ? { branch } : {}),
-						...(performance ? { performance } : {}),
-						extensionStatuses: currentSession.extensionStatuses,
-					};
-				},
-				getConfig: () => getCurrentSession()?.runtime.getConfig() ?? retiredConfig,
-				colorEnabled: !("NO_COLOR" in process.env),
-				requestRender: footerRequestRender,
-				onBranchChange: (callback) =>
-					footerData.onBranchChange(() => {
-						const currentSession = getCurrentSession();
-						if (!currentSession) return;
-						void currentSession.runtime.flushWorkspacePulseRefresh();
-						callback();
-					}),
-				theme: theme as unknown as ThemeLike,
-			});
-			const mounted = getCurrentSession();
-			if (mounted) mounted.footerDisposer = component.dispose;
-			else component.dispose();
-			return component;
-		});
-		try {
-			ctx.ui.setEditorComponent((tui, theme, keybindings) => new AtelierEditor(tui, theme, keybindings));
-		} catch {
-			// Composer framing is optional; the Sidebar Stats should still install.
-		}
+	function installFooter(_targetSession: ActiveSession): void {
+		// Footer and AtelierEditor chrome overlap omp's input row — disabled in omp.
 	}
 
 	const commandHandler = async (args: string, ctx: any): Promise<void> => {
@@ -828,43 +774,7 @@ export default function atelierExtension(
 			publishedSession = nextSession;
 			if (previousSession) disposeSession(previousSession, { clearFooter: true });
 
-			if (isFresh() && !shortcutRegistered) {
-				try {
-					pi.registerShortcut(loaded.config.shortcut as KeyId, {
-						description: "Open Sidebar Stats",
-						handler: async (shortcutContext) => openMenu(shortcutContext),
-					});
-				} catch {
-					pi.registerShortcut("alt+a" as KeyId, {
-						description: "Open Sidebar Stats",
-						handler: async (shortcutContext) => openMenu(shortcutContext),
-					});
-					initializationContext.ui.notify(
-						`Invalid Atelier shortcut "${loaded.config.shortcut}"; using alt+a`,
-						"warning",
-					);
-				}
-				shortcutRegistered = true;
-			}
-			if (isFresh() && !resizeShortcutRegistered) {
-				pi.registerShortcut("ctrl+shift+r" as KeyId, {
-					description: "Resize Sidebar Stats sidebar",
-					handler: (shortcutContext) => {
-						const current = getActiveSession(shortcutContext);
-						if (!current?.sidebar.isVisible()) {
-							shortcutContext.ui.notify("Show the Sidebar Stats sidebar before resizing it", "warning");
-							return;
-						}
-						current.sidebar.beginResize();
-					},
-				});
-				resizeShortcutRegistered = true;
-			}
-			if (enabled && isFresh() && activeSession === nextSession) {
-				installFooter(nextSession);
-				if (loaded.config.showSidebarOnStartup) nextSession.sidebar.show();
-			}
-			void candidateRuntime.flushWorkspacePulseRefresh();
+			// Shortcuts, footer, and sidebar auto-show disabled in omp — they capture keyboard input.
 		} catch (error) {
 			const cleanup = (action: () => void): void => {
 				try {
@@ -874,7 +784,6 @@ export default function atelierExtension(
 				}
 			};
 			if (!publishedSession) {
-				// Candidate-local cleanup: this session never became active, so no active-session teardown applies.
 				if (candidateSession) disposeSession(candidateSession);
 				else {
 					const sidebar = localSidebar;

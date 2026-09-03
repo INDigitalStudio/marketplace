@@ -11,9 +11,8 @@ import {
 	type SettingItem,
 	SettingsList,
 	Text,
-	truncateToWidth,
-	visibleWidth,
-} from "@earendil-works/pi-tui";
+} from "./_compat.js";
+import { truncateToWidth, visibleWidth } from "./_compat.js";
 import { saveUserConfig, saveUserConfigPatch } from "./config.js";
 import {
 	DISPLAY_SETTINGS_OVERLAY_MARGIN,

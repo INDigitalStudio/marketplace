@@ -36,7 +36,12 @@ export class SettingsManager {
 // CustomEditor: base editor class used by AtelierEditor in editor.ts.
 // Publicly exported by @oh-my-pi/pi-coding-agent via src/index.ts:36 → modes/components → custom-editor.
 export { CustomEditor } from "@oh-my-pi/pi-coding-agent";
+// getSettingsListTheme: theme for SettingsList TUI component.
+// Omp has no equivalent; return empty theme (SettingsList uses defaults).
+export function getSettingsListTheme(): Record<string, string> {
+	return {};
+}
 
 // ── Re-exports from @earendil-works/pi-tui ───────────────────────────────────
-
-export type { KeyId } from "@earendil-works/pi-tui";
+// Bypass omp-legacy-pi-bundled alias by re-exporting everything from the real package.
+export * from "../node_modules/@earendil-works/pi-tui/dist/index.js";

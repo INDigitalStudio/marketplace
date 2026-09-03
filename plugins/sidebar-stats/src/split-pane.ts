@@ -1,5 +1,6 @@
-import type { Component, OverlayHandle, OverlayOptions, TUI } from "@earendil-works/pi-tui";
-import { HStack, isViewportTUI, matchesKey } from "@earendil-works/pi-tui";
+import type { Component, OverlayHandle, OverlayOptions, TUI } from "./_compat.js";
+import { HStack, isViewportTUI } from "./_compat.js";
+import { matchesKey } from "./_compat.js";
 
 const ENABLE_MOUSE = "\u001b[?1002h\u001b[?1006h";
 const DISABLE_MOUSE = "\u001b[?1006l\u001b[?1002l";

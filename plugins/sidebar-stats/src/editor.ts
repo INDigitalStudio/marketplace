@@ -1,5 +1,5 @@
 import { CustomEditor } from "./_compat.js";
-import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
+import { truncateToWidth, visibleWidth } from "./_compat.js";
 
 /** Strip ANSI escape sequences from a string. */
 function stripTerminalSequences(line: string): string {
