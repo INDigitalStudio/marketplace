@@ -91,7 +91,7 @@ describe("sidebar disclosures", () => {
 
 	it("starts older settled subagents collapsed, then honors the manual override", () => {
 		const component = createSidebarComponent({
-			getSnapshot: () => snapshot("completed", 0),
+			getSnapshot: () => snapshot("completed", Date.now() - 5_000),
 			getConfig: () => DEFAULT_CONFIG,
 			getHeight: () => 100,
 			theme,
@@ -106,5 +106,19 @@ describe("sidebar disclosures", () => {
 		const expanded = [...component.render(42)];
 		expect(expanded.find((line) => line.includes("sub:Worker"))).toContain("▾");
 		expect(expanded.some((line) => line.includes("test-model"))).toBe(true);
+	});
+
+	it("hides completed or failed subagents once idle for 1 minute", () => {
+		const now = Date.now();
+		const component = createSidebarComponent({
+			getSnapshot: () => snapshot("completed", now - 61_000),
+			getConfig: () => DEFAULT_CONFIG,
+			getHeight: () => 100,
+			theme,
+			colorEnabled: false,
+		});
+		const lines = [...component.render(42)];
+		expect(lines.some((line) => line.includes("sub:Worker"))).toBe(false);
+		expect(lines.some((line) => line.includes("No subagents"))).toBe(true);
 	});
 });

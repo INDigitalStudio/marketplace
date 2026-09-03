@@ -392,7 +392,7 @@ function workspaceRows(snapshot: SidebarSnapshot, layout: SidebarLayout, palette
 
 function contextRole(snapshot: SidebarSnapshot, config: SidebarConfig): PaletteRole {
 	const percent = snapshot.metrics.contextPercent;
-	if (percent === null || !Number.isFinite(percent)) return "dim";
+	if (percent === null || !Number.isFinite(percent)) return "context";
 	if (percent >= config.contextDanger) return "error";
 	if (percent >= config.contextWarning) return "warning";
 	return "context";
@@ -431,13 +431,24 @@ function contextRows(
 	const percent = `${metrics.contextPercent?.toFixed(1)}%`;
 	const meterWidth = layout.compact
 		? Math.max(1, Math.min(10, contentWidth - 2))
-		: Math.max(1, Math.min(10, contentWidth - visibleWidth(usage) - visibleWidth(percent) - 4));
+		: Math.max(1, Math.min(12, contentWidth - 16));
 	const filled = Math.min(meterWidth, Math.max(0, Math.round(((metrics.contextPercent ?? 0) / 100) * meterWidth)));
 	const meter = `${palette.paint("dim", "[")}${palette.paint(role, "■".repeat(filled))}${palette.paint(
 		"dim",
 		"·".repeat(Math.max(0, meterWidth - filled)),
 	)}${palette.paint("dim", "]")}`;
-	return [spacedRow(palette.paint(role, usage), palette.paint(role, percent), contentWidth), meter];
+	const usageText = palette.paint(role, usage);
+	const percentText = palette.paint(role, percent);
+	const remaining = config.contextWarning - (metrics.contextPercent ?? 0);
+	const hintText =
+		remaining > 0
+			? palette.paint("muted", `(${remaining.toFixed(0)}% to warn)`)
+			: palette.paint(role, role === "error" ? "(danger)" : "(warning)");
+	const meterLine =
+		visibleWidth(meter) + visibleWidth(hintText) + 1 <= contentWidth
+			? spacedRow(meter, hintText, contentWidth)
+			: meter;
+	return [spacedRow(usageText, percentText, contentWidth), meterLine];
 }
 
 const currencyDecimals = (value: number): number =>
@@ -987,7 +998,7 @@ export function renderSidebarLines(
 		{
 			name: "context",
 			panel: "CONTEXT",
-			panelRole: contextRole(snapshot, config),
+			panelRole: "accent",
 			rows: contextRows(snapshot, config, panelContentWidth, layout, palette),
 			required: true,
 			dropRank: Number.POSITIVE_INFINITY,

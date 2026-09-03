@@ -13,7 +13,7 @@ import type { ExtensionAgentSession } from "./side-pane-api.js";
 
 const MAX_UNTRUSTED_CHARS = SIDEBAR_PANEL_MAX_ROW_CHARS;
 const BOUNDED_SETTLED_ROWS = 32;
-
+export const SETTLED_SUBAGENT_TTL_MS = 60_000;
 function sanitize(text: string): string {
 	return sanitizeSidebarPanelText(text, MAX_UNTRUSTED_CHARS);
 }
@@ -186,10 +186,11 @@ export function renderAgentPanelRows(input: AgentPanelRowsInput): string[] {
 		.filter((session) => session.status === "active")
 		.sort((left, right) => right.lastUpdate - left.lastUpdate);
 	const settled = subagents
-		.filter((session) => session.status !== "active")
+		.filter((session) => session.status !== "active" && now - session.lastUpdate < SETTLED_SUBAGENT_TTL_MS)
 		.sort((left, right) => right.lastUpdate - left.lastUpdate)
 		.slice(0, BOUNDED_SETTLED_ROWS);
 	const ordered = [...active, ...settled];
+	if (ordered.length === 0) return [palette.paint("dim", "No subagents")];
 	const rows: string[] = [];
 
 	for (let i = 0; i < ordered.length; i++) {

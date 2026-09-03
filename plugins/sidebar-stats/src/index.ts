@@ -8,7 +8,7 @@ import {
 	SettingsManager,
 } from "./_compat.js";
 import { type ExtensionAgentSession, getSidePaneUI } from "./side-pane-api.js";
-import { renderAgentPanelRows, AGENT_PANEL_TITLE } from "./agent-rows.js";
+import { renderAgentPanelRows, AGENT_PANEL_TITLE, SETTLED_SUBAGENT_TTL_MS } from "./agent-rows.js";
 import type { KeyId } from "./_compat.js";
 import {
 	type CompletionNotification,
@@ -111,6 +111,7 @@ interface ActiveSession {
 	readonly overlayCancellations: Set<() => void>;
 	agentSessions: readonly ExtensionAgentSession[];
 	unsubscribeAgentSessions: (() => void) | undefined;
+	agentExpiryTimer: ReturnType<typeof setTimeout> | undefined;
 	footerDisposer: (() => void) | undefined;
 	footerGeneration: number;
 	retired: boolean;
@@ -350,6 +351,10 @@ export default function sidebarStatsExtension(pi: ExtensionAPI, dependencies: Si
 		const unsubAgents = session.unsubscribeAgentSessions;
 		session.unsubscribeAgentSessions = undefined;
 		if (unsubAgents) cleanup(unsubAgents);
+		if (session.agentExpiryTimer) {
+			clearTimeout(session.agentExpiryTimer);
+			session.agentExpiryTimer = undefined;
+		}
 	}
 
 	function teardownActiveSession(ctx?: ExtensionContext): void {
@@ -741,6 +746,7 @@ export default function sidebarStatsExtension(pi: ExtensionAPI, dependencies: Si
 				overlayCancellations: new Set(),
 				agentSessions: [],
 				unsubscribeAgentSessions: undefined,
+				agentExpiryTimer: undefined,
 				footerDisposer: undefined,
 				footerGeneration: 0,
 				retired: false,
@@ -787,9 +793,26 @@ export default function sidebarStatsExtension(pi: ExtensionAPI, dependencies: Si
 					const current = activeSession;
 					if (!current || current.token !== agentToken) return;
 					current.agentSessions = sessions;
+					if (current.agentExpiryTimer) {
+						clearTimeout(current.agentExpiryTimer);
+						current.agentExpiryTimer = undefined;
+					}
+					const now = Date.now();
+					const nextExpiry = sessions
+						.filter((s) => s.kind === "subagent" && s.status !== "active")
+						.map((s) => SETTLED_SUBAGENT_TTL_MS - (now - s.lastUpdate))
+						.filter((remaining) => remaining > 0)
+						.sort((a, b) => a - b)[0];
+					if (nextExpiry != null) {
+						current.agentExpiryTimer = setTimeout(() => {
+							if (activeSession?.token === agentToken) {
+								current.sidebar.requestRender();
+							}
+						}, nextExpiry + 50);
+						current.agentExpiryTimer.unref?.();
+					}
 					current.sidebar.requestRender();
 				});
-			}
 
 			// Shortcuts, footer, and sidebar auto-show disabled in omp — they capture keyboard input.
 		} catch (error) {
