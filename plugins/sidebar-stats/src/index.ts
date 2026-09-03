@@ -813,6 +813,7 @@ export default function sidebarStatsExtension(pi: ExtensionAPI, dependencies: Si
 					}
 					current.sidebar.requestRender();
 				});
+			}
 
 			// Shortcuts, footer, and sidebar auto-show disabled in omp — they capture keyboard input.
 		} catch (error) {
