@@ -10,7 +10,7 @@ import {
 } from "./display.js";
 import {
 	DEFAULT_CONFIG,
-	type AtelierConfig,
+	type SidebarConfig,
 	type ConfigurationSource,
 	type DisplayLayerState,
 	type DisplayProvenance,
@@ -23,7 +23,7 @@ import {
 import { DEFAULT_SIDEBAR_PANEL_LAYOUT, normalizeSidebarPanelLayout } from "./sidebar-panels.js";
 
 export interface ConfigLoadResult {
-	config: AtelierConfig;
+	config: SidebarConfig;
 	warnings: string[];
 	displayLayers: DisplayLayerState;
 	displayProvenance: DisplayProvenance;
@@ -33,25 +33,25 @@ export interface LoadConfigOptions {
 	userPath: string;
 	projectPath: string;
 	projectTrusted: boolean;
-	session?: Record<string, unknown> | Partial<AtelierConfig>;
+	session?: Record<string, unknown> | Partial<SidebarConfig>;
 }
 
 interface SidebarResolution {
-	layout: AtelierConfig["sidebarPanelLayout"];
+	layout: SidebarConfig["sidebarPanelLayout"];
 	warnings: string[];
 	authoritative: boolean;
 }
 
 function cloneSidebarLayout(
-	layout: AtelierConfig["sidebarPanelLayout"],
-): AtelierConfig["sidebarPanelLayout"] {
+	layout: SidebarConfig["sidebarPanelLayout"],
+): SidebarConfig["sidebarPanelLayout"] {
 	return layout.map((entry) => ({ ...entry }));
 }
 
 function parseSidebarLayout(
 	value: unknown,
 	warnings: string[],
-): AtelierConfig["sidebarPanelLayout"] | undefined {
+): SidebarConfig["sidebarPanelLayout"] | undefined {
 	if (!Array.isArray(value)) {
 		warnings.push("sidebarPanelLayout must be an array");
 		return undefined;
@@ -75,7 +75,7 @@ function parseSidebarLayout(
 }
 
 function setSidebarVisibility(
-	layout: AtelierConfig["sidebarPanelLayout"],
+	layout: SidebarConfig["sidebarPanelLayout"],
 	id: "agent" | "todos",
 	visible: boolean,
 ): void {
@@ -85,7 +85,7 @@ function setSidebarVisibility(
 
 function resolveSidebarLayout(
 	layers: DisplayLayerState,
-	base: AtelierConfig = DEFAULT_CONFIG,
+	base: SidebarConfig = DEFAULT_CONFIG,
 ): SidebarResolution {
 	const warnings: string[] = [];
 	const user = layers.user;
@@ -115,7 +115,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
 const record = (value: unknown): Record<string, unknown> | undefined => (isRecord(value) ? value : undefined);
-const cloneConfig = (config: AtelierConfig): AtelierConfig => ({
+const cloneConfig = (config: SidebarConfig): SidebarConfig => ({
 	...config,
 	segmentLayout: config.segmentLayout.map((entry) => ({ ...entry })),
 	sidebarPanelLayout: cloneSidebarLayout(config.sidebarPanelLayout),
@@ -244,7 +244,7 @@ export function resolveDisplayLayers(
 		}
 		if ("density" in input) {
 			if (typeof input.density === "string" && densities.has(input.density)) {
-				display.density = input.density as AtelierConfig["density"];
+				display.density = input.density as SidebarConfig["density"];
 				provenance.density = source;
 				changedTemplateField = true;
 			} else
@@ -329,7 +329,7 @@ export function resolveDisplayLayers(
 	return { display, provenance, warnings: [...new Set(warnings)] };
 }
 
-function applyNonDisplay(input: unknown, config: AtelierConfig, warnings: string[]): void {
+function applyNonDisplay(input: unknown, config: SidebarConfig, warnings: string[]): void {
 	if (!isRecord(input)) {
 		if (input !== undefined) warnings.push("Configuration must be a JSON object");
 		return;
@@ -372,9 +372,9 @@ function applyNonDisplay(input: unknown, config: AtelierConfig, warnings: string
 }
 
 function applyGlobalSidebarCompatibility(
-	config: AtelierConfig,
+	config: SidebarConfig,
 	input: unknown,
-	base: Pick<AtelierConfig, "showSidebarAgent" | "showSidebarTodos"> = DEFAULT_CONFIG,
+	base: Pick<SidebarConfig, "showSidebarAgent" | "showSidebarTodos"> = DEFAULT_CONFIG,
 ): void {
 	config.showSidebarAgent = base.showSidebarAgent;
 	config.showSidebarTodos = base.showSidebarTodos;
@@ -383,7 +383,7 @@ function applyGlobalSidebarCompatibility(
 	if (typeof global?.showSidebarTodos === "boolean") config.showSidebarTodos = global.showSidebarTodos;
 }
 
-export function validateConfig(input: unknown, base: AtelierConfig = DEFAULT_CONFIG): ConfigLoadResult {
+export function validateConfig(input: unknown, base: SidebarConfig = DEFAULT_CONFIG): ConfigLoadResult {
 	const config = cloneConfig(base);
 	const warnings: string[] = [];
 	applyNonDisplay(input, config, warnings);
@@ -490,10 +490,10 @@ export async function loadConfig(options: LoadConfigOptions): Promise<ConfigLoad
 	};
 }
 
-export async function saveUserConfig(path: string, config: AtelierConfig): Promise<void> {
+export async function saveUserConfig(path: string, config: SidebarConfig): Promise<void> {
 	await writeJsonAtomic(path, config);
 }
-export async function saveUserConfigPatch(path: string, patch: Partial<AtelierConfig>): Promise<void> {
+export async function saveUserConfigPatch(path: string, patch: Partial<SidebarConfig>): Promise<void> {
 	let current: Record<string, unknown> = {};
 	try {
 		const parsed: unknown = JSON.parse(await readFile(path, "utf8"));

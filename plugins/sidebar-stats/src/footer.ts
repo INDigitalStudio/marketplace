@@ -1,8 +1,8 @@
 import { type Component, truncateToWidth, visibleWidth } from "./_compat.js";
 import { formatTokens } from "./metrics.js";
-import { type AtelierPalette, createPalette, type PaletteRole } from "./palette.js";
+import { type SidebarPalette, createPalette, type PaletteRole } from "./palette.js";
 import { responsePerformanceValues } from "./run-activity.js";
-import type { AtelierConfig, AtelierMetrics, AtelierState, DisplayValue, FooterState } from "./types.js";
+import type { SidebarConfig, SidebarMetrics, SidebarState, DisplayValue, FooterState } from "./types.js";
 
 export interface ThemeLike {
 	readonly name?: string;
@@ -71,11 +71,11 @@ export function selectResponsiveMode(width: number): ResponsiveMode {
 	return "safe";
 }
 
-function paintValue(value: DisplayValue, role: PaletteRole, palette: AtelierPalette): string {
+function paintValue(value: DisplayValue, role: PaletteRole, palette: SidebarPalette): string {
 	return palette.paint(value.available ? role : "dim", value.text);
 }
 
-function metric(label: string, value: DisplayValue, palette: AtelierPalette, role: PaletteRole): string {
+function metric(label: string, value: DisplayValue, palette: SidebarPalette, role: PaletteRole): string {
 	return `${palette.paint("muted", label)} ${paintValue(value, role, palette)}`;
 }
 
@@ -91,7 +91,7 @@ function percentValue(value: number | null | undefined, decimals: number): Displ
 		: { text: "—", available: false };
 }
 
-function costValue(metrics: AtelierMetrics, decimals: number, compact: boolean): DisplayValue {
+function costValue(metrics: SidebarMetrics, decimals: number, compact: boolean): DisplayValue {
 	if (!metrics.costAvailable || !Number.isFinite(metrics.cost)) return { text: "$—", available: false };
 	const amount =
 		compact && metrics.cost >= 1_000
@@ -100,7 +100,7 @@ function costValue(metrics: AtelierMetrics, decimals: number, compact: boolean):
 	return { text: `$${amount}`, available: true };
 }
 
-function contextRole(metrics: AtelierMetrics, config: AtelierConfig): PaletteRole {
+function contextRole(metrics: SidebarMetrics, config: SidebarConfig): PaletteRole {
 	if (metrics.contextPercent === null || !Number.isFinite(metrics.contextPercent)) return "context";
 	if (metrics.contextPercent >= config.contextDanger) return "error";
 	if (metrics.contextPercent >= config.contextWarning) return "warning";
@@ -108,8 +108,8 @@ function contextRole(metrics: AtelierMetrics, config: AtelierConfig): PaletteRol
 }
 
 function activityText(
-	state: AtelierState,
-	palette: AtelierPalette,
+	state: SidebarState,
+	palette: SidebarPalette,
 	theme: ThemeLike,
 	workingDots: string,
 	compact: boolean,
@@ -131,7 +131,7 @@ function activityText(
 
 function buildItems(
 	state: FooterState,
-	config: AtelierConfig,
+	config: SidebarConfig,
 	theme: ThemeLike,
 	colorEnabled: boolean,
 	workingDots: string,
@@ -150,7 +150,7 @@ function buildItems(
 		if (!entry.visible) continue;
 		const segment = entry.id;
 		if (segment === "brand") {
-			const brand = palette.paint("muted", "ATELIER");
+			const brand = palette.paint("muted", "SIDEBAR");
 			add({
 				id: "brand",
 				zone: "left",
@@ -385,7 +385,7 @@ function compose(items: FooterItem[], width: number, leftSeparator: string): str
 
 export function renderFooterLine(
 	state: FooterState,
-	config: AtelierConfig,
+	config: SidebarConfig,
 	theme: ThemeLike,
 	width: number,
 	colorEnabled = true,
@@ -403,7 +403,7 @@ export function renderFooterLine(
 
 export interface FooterComponentOptions {
 	getState(): FooterState;
-	getConfig(): AtelierConfig;
+	getConfig(): SidebarConfig;
 	colorEnabled?: boolean;
 	requestRender(): void;
 	onBranchChange(callback: () => void): () => void;

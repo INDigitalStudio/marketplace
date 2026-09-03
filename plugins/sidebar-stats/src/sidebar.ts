@@ -4,7 +4,7 @@ import type { ExtensionContext } from "./_compat.js";
 import { type Component, type OverlayHandle, truncateToWidth, visibleWidth } from "./_compat.js";
 import type { ThemeLike } from "./footer.js";
 import { aggregateMetrics, formatTokens } from "./metrics.js";
-import { type AtelierPalette, createPalette, type PaletteRole } from "./palette.js";
+import { type SidebarPalette, createPalette, type PaletteRole } from "./palette.js";
 import {
 	EMPTY_RUN_ACTIVITY,
 	formatDuration,
@@ -25,8 +25,8 @@ import {
 import { createSplitPaneController, type SplitPaneController } from "./split-pane.js";
 import {
 	DEFAULT_CONFIG,
-	type AtelierConfig,
-	type AtelierState,
+	type SidebarConfig,
+	type SidebarState,
 	type NormalizedTodo,
 	type WorkspacePulseState,
 } from "./types.js";
@@ -70,7 +70,7 @@ export {
 } from "./sidebar-panels.js";
 
 export interface SidebarSnapshotInput {
-	state: AtelierState;
+	state: SidebarState;
 	cwd: string;
 	sessionName?: string;
 	sessionFile?: string;
@@ -84,7 +84,7 @@ export interface SidebarSnapshotInput {
 	sidebarPanels?: readonly SidebarPanelData[];
 }
 
-export interface SidebarSnapshot extends AtelierState {
+export interface SidebarSnapshot extends SidebarState {
 	projectName: string;
 	cwd: string;
 	sessionName?: string;
@@ -158,7 +158,7 @@ function renderDock(
 	rows: string[],
 	width: number,
 	height: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	resizing = false,
 ): string[] {
 	const safeWidth = Math.max(0, Math.trunc(width));
@@ -177,7 +177,7 @@ function panelRows(
 	title: string,
 	rows: readonly string[],
 	width: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	theme: ThemeLike,
 	role: PaletteRole,
 	jewel: "✦" | "✧",
@@ -199,7 +199,7 @@ function panelRows(
 	return [top, ...body, palette.paint("dim", `╰${"─".repeat(safeWidth - 2)}╯`), ""];
 }
 
-function valueRow(value: string | undefined, palette: AtelierPalette, role: PaletteRole): string {
+function valueRow(value: string | undefined, palette: SidebarPalette, role: PaletteRole): string {
 	const text = display(value);
 	return palette.paint(text === "—" ? "dim" : role, text);
 }
@@ -211,7 +211,7 @@ interface SidebarLayout {
 	showToolNames: boolean;
 }
 
-function sidebarLayout(width: number, config: AtelierConfig): SidebarLayout {
+function sidebarLayout(width: number, config: SidebarConfig): SidebarLayout {
 	const compact = width <= COMPACT_SIDEBAR_MAX_WIDTH;
 	return {
 		compact,
@@ -237,7 +237,7 @@ function agentRows(
 	snapshot: SidebarSnapshot,
 	layout: SidebarLayout,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	theme: ThemeLike,
 ): string[] {
 	const activity = `${snapshot.activity.slice(0, 1).toUpperCase()}${snapshot.activity.slice(1)}`;
@@ -304,7 +304,7 @@ interface WorkspacePulseRows {
 function workspacePulseRows(
 	pulse: WorkspacePulseState,
 	layout: SidebarLayout,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): WorkspacePulseRows {
 	if (pulse.status === "inspecting") return { core: [palette.paint("muted", "inspecting…")], details: [] };
 	if (pulse.status === "not-repo")
@@ -355,7 +355,7 @@ interface WorkspaceRows {
 function workspaceRows(
 	snapshot: SidebarSnapshot,
 	layout: SidebarLayout,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): WorkspaceRows {
 	const project = valueRow(snapshot.projectName, palette, "primary");
 	const branch = snapshot.branch ? palette.paint("accent", display(snapshot.branch)) : "";
@@ -387,7 +387,7 @@ function workspaceRows(
 	};
 }
 
-function contextRole(snapshot: SidebarSnapshot, config: AtelierConfig): PaletteRole {
+function contextRole(snapshot: SidebarSnapshot, config: SidebarConfig): PaletteRole {
 	const percent = snapshot.metrics.contextPercent;
 	if (percent === null || !Number.isFinite(percent)) return "dim";
 	if (percent >= config.contextDanger) return "error";
@@ -406,10 +406,10 @@ function spacedRow(left: string, right: string, width: number): string {
 
 function contextRows(
 	snapshot: SidebarSnapshot,
-	config: AtelierConfig,
+	config: SidebarConfig,
 	contentWidth: number,
 	layout: SidebarLayout,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): string[] {
 	const { metrics } = snapshot;
 	const available =
@@ -451,7 +451,7 @@ function formatUsageTokens(count: number): string {
 	return `${(safe / 1_000_000_000).toFixed(1)}B`;
 }
 
-function metricValue(label: string, value: string, palette: AtelierPalette, role: PaletteRole): string {
+function metricValue(label: string, value: string, palette: SidebarPalette, role: PaletteRole): string {
 	return `${palette.paint("muted", label)} ${palette.paint(role, value)}`;
 }
 
@@ -460,7 +460,7 @@ function metricPairRows(
 	right: string,
 	contentWidth: number,
 	layout: SidebarLayout,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): string[] {
 	const separator = layout.compact ? ` ${palette.paint("dim", "·")} ` : "  ";
 	const inline = `${left}${separator}${right}`;
@@ -469,10 +469,10 @@ function metricPairRows(
 
 function usageRows(
 	snapshot: SidebarSnapshot,
-	config: AtelierConfig,
+	config: SidebarConfig,
 	contentWidth: number,
 	layout: SidebarLayout,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): string[] {
 	const { metrics } = snapshot;
 	if (!metrics.usageAvailable && !metrics.costAvailable) return [];
@@ -517,7 +517,7 @@ function toolsStatusRows(
 	snapshot: SidebarSnapshot,
 	showToolNames: boolean,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): string[] {
 	const disclosure = showToolNames ? "▾" : "▸";
 	return [
@@ -535,7 +535,7 @@ function toolsStatusRows(
 function activeToolNameRows(
 	snapshot: SidebarSnapshot,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 ): string[] {
 	const names = snapshot.activeToolNames.map((name) => palette.paint("primary", name));
 	if (names.length === 0) return [];
@@ -560,7 +560,7 @@ function activeToolNameRows(
 	return rows;
 }
 
-function todosRows(snapshot: SidebarSnapshot, palette: AtelierPalette): string[] {
+function todosRows(snapshot: SidebarSnapshot, palette: SidebarPalette): string[] {
 	const todoList = snapshot.todos;
 	if (todoList.length === 0) return [];
 
@@ -598,7 +598,7 @@ function statusDetailPanelRole(snapshot: SidebarSnapshot): PaletteRole {
 		: "warning";
 }
 
-function statusDetailRows(snapshot: SidebarSnapshot, palette: AtelierPalette): string[] {
+function statusDetailRows(snapshot: SidebarSnapshot, palette: SidebarPalette): string[] {
 	const statuses = snapshot.extensionStatuses
 		.map(sanitize)
 		.filter((status) => status && exceptionStatusPattern.test(status));
@@ -634,7 +634,7 @@ interface SidebarGroup {
 function renderGroups(
 	groups: readonly SidebarGroup[],
 	width: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	theme: ThemeLike,
 ): string[] {
 	const rendered: string[] = [];
@@ -684,7 +684,7 @@ function panelIdForTitle(title: string): string | undefined {
 	}[title];
 }
 
-function contributedRows(panel: SidebarPanelData, palette: AtelierPalette): string[] {
+function contributedRows(panel: SidebarPanelData, palette: SidebarPalette): string[] {
 	const rows = panel.rows.slice(0, SIDEBAR_PANEL_MAX_ROWS).map((row) => {
 		const text = sanitizeSidebarPanelText(
 			typeof row === "string" ? row : row.text,
@@ -715,7 +715,7 @@ function toolStatusLabel(tool: ToolActivity, now: number): string {
 function toolActivityRow(
 	tool: ToolActivity,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	now: number,
 	extraLive = 0,
 ): string {
@@ -736,7 +736,7 @@ function toolActivityRow(
 	return truncateToWidth(row, contentWidth, "");
 }
 
-function runSummaryRow(activity: RunActivitySnapshot, palette: AtelierPalette, now: number): string {
+function runSummaryRow(activity: RunActivitySnapshot, palette: SidebarPalette, now: number): string {
 	if (activity.phase === "idle") return palette.paint("ready", "Ready");
 	const duration =
 		activity.phase === "settled"
@@ -750,14 +750,14 @@ function runSummaryRow(activity: RunActivitySnapshot, palette: AtelierPalette, n
 	return palette.paint(role, `${label} · ${activity.phase} ${duration}`);
 }
 
-function responsePerformanceRow(activity: RunActivitySnapshot, palette: AtelierPalette): string {
+function responsePerformanceRow(activity: RunActivitySnapshot, palette: SidebarPalette): string {
 	return palette.paint("output", formatResponsePerformance(activity.performance));
 }
 
 function activityRows(
 	activity: RunActivitySnapshot,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	now: number,
 ): ActivityGroups {
 	const liveTurn = activity.phase === "running";
@@ -799,7 +799,7 @@ function aggregateActivityText(activity: RunActivitySnapshot): string {
 function activitySidebarGroups(
 	snapshot: SidebarSnapshot,
 	contentWidth: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	now: number,
 ): SidebarGroup[] {
 	const groups = activityRows(snapshot.runActivity, contentWidth, palette, now);
@@ -850,7 +850,7 @@ function composeGroups(
 	groups: SidebarGroup[],
 	height: number,
 	width: number,
-	palette: AtelierPalette,
+	palette: SidebarPalette,
 	theme: ThemeLike,
 ): SidebarGroup[] {
 	let candidate = groups.filter((group) => group.rows.length > 0);
@@ -873,7 +873,7 @@ function composeGroups(
 
 export function renderSidebarLines(
 	snapshot: SidebarSnapshot,
-	config: AtelierConfig,
+	config: SidebarConfig,
 	theme: ThemeLike,
 	width: number,
 	height: number,
@@ -1078,7 +1078,7 @@ export function renderSidebarLines(
 
 export interface SidebarComponentOptions {
 	getSnapshot(): SidebarSnapshot;
-	getConfig(): AtelierConfig;
+	getConfig(): SidebarConfig;
 	getHeight(): number;
 	isResizing?(): boolean;
 	theme: ThemeLike;
@@ -1143,7 +1143,7 @@ export interface SidebarController {
 export interface SidebarControllerOptions {
 	ctx: ExtensionContext;
 	getSnapshot(): SidebarSnapshot;
-	getConfig(): AtelierConfig;
+	getConfig(): SidebarConfig;
 	colorEnabled?: boolean;
 	shouldAnimate?(): boolean;
 	animationIntervalMs?: number;
@@ -1153,7 +1153,7 @@ export interface SidebarControllerOptions {
 
 interface RetirableSidebarBinding {
 	getSnapshot(): SidebarSnapshot;
-	getConfig(): AtelierConfig;
+	getConfig(): SidebarConfig;
 	isResizing(): boolean;
 	setResizing(reader: () => boolean): void;
 	detach(): void;
@@ -1183,13 +1183,13 @@ function cloneSidebarSnapshot(snapshot: SidebarSnapshot): SidebarSnapshot {
 	return structuredClone(snapshot);
 }
 
-function cloneSidebarConfig(config: AtelierConfig): AtelierConfig {
+function cloneSidebarConfig(config: SidebarConfig): SidebarConfig {
 	return structuredClone(config);
 }
 
 function createRetirableSidebarBinding(options: SidebarControllerOptions): RetirableSidebarBinding {
 	let readSnapshot: (() => SidebarSnapshot) | undefined = options.getSnapshot;
-	let readConfig: (() => AtelierConfig) | undefined = options.getConfig;
+	let readConfig: (() => SidebarConfig) | undefined = options.getConfig;
 	let readResizing: (() => boolean) | undefined;
 	let snapshot = createDetachedSidebarSnapshot(typeof options.ctx.cwd === "string" ? options.ctx.cwd : "");
 	let config = cloneSidebarConfig(DEFAULT_CONFIG);

@@ -164,7 +164,7 @@ export function createSplitPaneController(options: SplitPaneControllerOptions = 
 		const adaptedTui = tui as AdaptedTui;
 		const currentState = adaptedTui[PI_084_REGULAR_RENDER_ADAPTER];
 		if (currentState?.owner === adapterOwner) return;
-		// Another Atelier instance owns this renderer; do not stack private adapters.
+		// Another Sidebar instance owns this renderer; do not stack private adapters.
 		if (currentState) return;
 		const baseRender = findPrototypeRender(tui);
 		if (!baseRender) return;
@@ -508,11 +508,11 @@ export function createSplitPaneController(options: SplitPaneControllerOptions = 
 		beginResize() {
 			if (resizing) return true;
 			if (!tui || !enabled) {
-				options.onWarning?.("Atelier sidebar is not ready to resize");
+				options.onWarning?.("Sidebar is not ready to resize");
 				return false;
 			}
 			if (!visibleAt(tui.terminal.columns)) {
-				options.onWarning?.("Terminal is too narrow to resize the Atelier sidebar");
+				options.onWarning?.("Terminal is too narrow to resize the Sidebar");
 				return false;
 			}
 			if (!options.subscribeInput) {

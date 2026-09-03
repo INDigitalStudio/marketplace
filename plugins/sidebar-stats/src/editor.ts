@@ -82,8 +82,8 @@ export function frameEditorLines(
 	return framed.map((line) => truncateToWidth(line, safeWidth, ""));
 }
 
-/** Pi composer with Atelier's rounded frame. Preserves thinking-level borderColor. */
-export class AtelierEditor extends CustomEditor {
+/** Pi composer with Sidebar's rounded frame. Preserves thinking-level borderColor. */
+export class SidebarEditor extends CustomEditor {
 	override render(width: number): string[] {
 		const safeWidth = Math.max(0, Math.trunc(width));
 		if (safeWidth < EDITOR_FRAME_MIN_WIDTH) return super.render(safeWidth);

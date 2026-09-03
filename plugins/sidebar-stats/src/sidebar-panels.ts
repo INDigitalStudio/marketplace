@@ -544,7 +544,7 @@ export function createSidebarPanelRegistry(options: SidebarPanelRegistryOptions 
 
 /**
  * Convenience publisher for contributing extensions. It replays registration
- * when Atelier asks for discovery, so loading either extension first works.
+ * when Sidebar asks for discovery, so loading either extension first works.
  */
 export function registerSidebarPanel(
 	pi: Pick<ExtensionAPI, "events">,

@@ -1,4 +1,4 @@
-import type { AtelierMetrics } from "./types.js";
+import type { SidebarMetrics } from "./types.js";
 
 export interface UsageMessage {
 	usage?: {
@@ -21,7 +21,7 @@ const finite = (value: number | undefined): number => (Number.isFinite(value) ? 
 export function aggregateMetrics(
 	messages: readonly UsageMessage[],
 	options: AggregateOptions,
-): AtelierMetrics {
+): SidebarMetrics {
 	let input = 0;
 	let output = 0;
 	let cacheRead = 0;
@@ -81,10 +81,10 @@ export function formatTokens(count: number): string {
 }
 
 const decimals = (value: number): number => Math.min(6, Math.max(0, Math.trunc(finite(value))));
-const usageValue = (metrics: AtelierMetrics, amount: number): string =>
+const usageValue = (metrics: SidebarMetrics, amount: number): string =>
 	metrics.usageAvailable ? formatTokens(amount) : "—";
 
-export function formatMetrics(metrics: AtelierMetrics, currencyDecimals: number): string {
+export function formatMetrics(metrics: SidebarMetrics, currencyDecimals: number): string {
 	const parts = [
 		`↑${usageValue(metrics, metrics.input)}`,
 		`↓${usageValue(metrics, metrics.output)}`,
@@ -99,13 +99,13 @@ export function formatMetrics(metrics: AtelierMetrics, currencyDecimals: number)
 	return parts.join(" ");
 }
 
-export function formatContext(metrics: AtelierMetrics): string {
+export function formatContext(metrics: SidebarMetrics): string {
 	const usage = metrics.contextPercent === null ? "?" : `${finite(metrics.contextPercent).toFixed(1)}%`;
 	const compaction = metrics.autoCompact === true ? " (auto)" : metrics.autoCompact === null ? " (—)" : "";
 	return `${usage}/${formatTokens(metrics.contextWindow)}${compaction}`;
 }
 
-export function formatCompactMetrics(metrics: AtelierMetrics, currencyDecimals: number): string {
+export function formatCompactMetrics(metrics: SidebarMetrics, currencyDecimals: number): string {
 	const parts = [
 		`↑${usageValue(metrics, metrics.input)}↓${usageValue(metrics, metrics.output)}`,
 		`R${usageValue(metrics, metrics.cacheRead)}${metrics.cacheWrite > 0 ? `W${usageValue(metrics, metrics.cacheWrite)}` : ""}`,
@@ -123,7 +123,7 @@ export function formatCompactMetrics(metrics: AtelierMetrics, currencyDecimals: 
 	return `${parts[0]} ${parts[1]} ${parts.slice(2).join("")}`;
 }
 
-export function formatCompactContext(metrics: AtelierMetrics): string {
+export function formatCompactContext(metrics: SidebarMetrics): string {
 	const usage = metrics.contextPercent === null ? "?" : `${finite(metrics.contextPercent).toFixed(1)}%`;
 	const compaction = metrics.autoCompact === true ? "(auto)" : metrics.autoCompact === null ? "(—)" : "";
 	return `${usage}/${formatTokens(metrics.contextWindow)}${compaction}`;

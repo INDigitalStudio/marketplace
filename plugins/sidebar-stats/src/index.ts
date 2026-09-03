@@ -15,12 +15,12 @@ import {
 	type SpawnNotificationProcess,
 } from "./completion-notifier.js";
 import { loadConfig, type saveUserConfig, saveUserConfigPatch } from "./config.js";
-import { AtelierEditor } from "./editor.js";
+import { SidebarEditor } from "./editor.js";
 import { createFooterComponent, type ThemeLike } from "./footer.js";
 import {
 	type DisplaySettingsRuntime,
 	type OverlayLifetime,
-	openAtelierControlCenter,
+	openSidebarControlCenter,
 	openDisplaySettingsWorkspace,
 } from "./menu.js";
 import { createRunActivityTracker, type RunActivityTracker } from "./run-activity.js";
@@ -37,10 +37,10 @@ import {
 	isSidebarPanelContributionId,
 	type SidebarPanelRegistry,
 } from "./sidebar-panels.js";
-import { AtelierRuntime, createInertAtelierState } from "./state.js";
+import { SidebarRuntime, createInertSidebarState } from "./state.js";
 import type {
-	AtelierConfig,
-	AtelierState,
+	SidebarConfig,
+	SidebarState,
 	FooterState,
 	NormalizedTodo,
 	RpivTask,
@@ -93,8 +93,8 @@ export type {
 	SidebarPanelLayoutEntry,
 } from "./types.js";
 
-export interface AtelierExtensionDependencies {
-	/** @deprecated Retained for source compatibility; Atelier no longer performs full config writes. */
+export interface SidebarExtensionDependencies {
+	/** @deprecated Retained for source compatibility; Sidebar no longer performs full config writes. */
 	saveConfig?: typeof saveUserConfig;
 	loadConfig?: typeof loadConfig;
 	saveConfigPatch?: typeof saveUserConfigPatch;
@@ -106,13 +106,13 @@ interface ActiveSession {
 	readonly ctx: ExtensionContext;
 	readonly sessionManager: ExtensionContext["sessionManager"];
 	readonly token: LifecycleToken;
-	readonly runtime: AtelierRuntime;
+	readonly runtime: SidebarRuntime;
 	readonly sidebar: SidebarController;
 	readonly panelRegistry: SidebarPanelRegistry;
 	readonly runActivity: RunActivityTracker;
 	readonly completionNotifier: CompletionNotifier;
-	readonly retiredState: AtelierState;
-	readonly retiredConfig: AtelierConfig;
+	readonly retiredState: SidebarState;
+	readonly retiredConfig: SidebarConfig;
 	readonly retiredCwd: string;
 	readonly overlayCancellations: Set<() => void>;
 	footerDisposer: (() => void) | undefined;
@@ -130,9 +130,9 @@ interface LifecycleToken {
 	readonly id: number;
 }
 
-export default function atelierExtension(
+export default function sidebarStatsExtension(
 	pi: ExtensionAPI,
-	dependencies: AtelierExtensionDependencies = {},
+	dependencies: SidebarExtensionDependencies = {},
 ): void {
 	const _loadConfig = dependencies.loadConfig ?? loadConfig;
 	const saveConfigPatch = dependencies.saveConfigPatch ?? saveUserConfigPatch;
@@ -458,7 +458,7 @@ export default function atelierExtension(
 			return;
 		}
 		const { runtime: targetRuntime, sidebar: targetSidebar } = current;
-		await openAtelierControlCenter(
+		await openSidebarControlCenter(
 			pi,
 			ctx,
 			targetRuntime,
@@ -518,30 +518,17 @@ export default function atelierExtension(
 	}
 
 	function installFooter(_targetSession: ActiveSession): void {
-		// Footer and AtelierEditor chrome overlap omp's input row — disabled in omp.
+		// Footer and SidebarEditor chrome overlap omp's input row — disabled in omp.
 	}
 
 	const commandHandler = async (args: string, ctx: any): Promise<void> => {
 		const parts = args.trim().toLowerCase().split(/\s+/).filter(Boolean);
 		const [action, sidebarAction, ...extra] = parts;
 		if (action === "display") {
-			if (sidebarAction !== undefined || extra.length > 0) {
-				ctx.ui.notify("Usage: /sidebar-stats display", "warning");
-				return;
-			}
-			await openDisplay(ctx);
+			ctx.ui.notify("Display settings are available in TUI mode via the sidebar overlay.", "info");
 			return;
 		}
 		if (action === "sidebar") {
-			if (ctx.mode !== "tui") {
-				ctx.ui.notify("Sidebar Stats sidebar requires TUI mode", "warning");
-				return;
-			}
-			const current = getActiveSession(ctx);
-			if (!current) {
-				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-				return;
-			}
 			if (sidebarAction === "tools") {
 				const [toolAction, ...toolExtra] = extra;
 				if (
@@ -549,6 +536,11 @@ export default function atelierExtension(
 					(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
 				) {
 					ctx.ui.notify("Usage: /sidebar-stats sidebar tools [on|off]", "warning");
+					return;
+				}
+				const current = getActiveSession(ctx);
+				if (!current) {
+					ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
 					return;
 				}
 				await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
@@ -561,9 +553,7 @@ export default function atelierExtension(
 				ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
 				return;
 			}
-			if (sidebarAction === "on") current.sidebar.show();
-			else if (sidebarAction === "off") current.sidebar.hide();
-			else current.sidebar.toggle();
+			ctx.ui.notify("Sidebar toggle is unavailable in omp (TUI overlay captures keyboard). Use /sidebar-stats status for info.", "info");
 			return;
 		}
 		if (action === "disable") {
@@ -586,11 +576,26 @@ export default function atelierExtension(
 				return;
 			}
 			enabled = true;
-			installFooter(current);
 			ctx.ui.notify("Sidebar Stats enabled", "info");
 			return;
 		}
-		await openMenu(ctx);
+		if (action === "status") {
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			const state = current.runtime.getState();
+			const config = current.runtime.getConfig();
+			ctx.ui.notify(
+				`Activity: ${state.activity} | Model: ${state.modelId ?? "—"} | Context: ${state.metrics.contextPercent ?? "—"}% | Cost: $${state.metrics.cost.toFixed(2)}`,
+				"info",
+			);
+			return;
+		}
+		ctx.ui.notify(
+			"Sidebar Stats commands: status, enable, disable, sidebar tools [on|off]", "info",
+		);
 	};
 
 	pi.registerCommand?.("sidebar-stats", {
@@ -617,7 +622,7 @@ export default function atelierExtension(
 				const message = err instanceof Error ? err.message : String(err);
 				commandCtx.ui.notify(`/sidebar-stats failed: ${message}`, "error");
 			}
-			return undefined;
+			return { action: "handled" };
 		});
 	}
 
@@ -631,7 +636,7 @@ export default function atelierExtension(
 		const initializationSessionManager = initializationContext.sessionManager;
 		const initializationToken = startLifecycleGeneration(initializationSessionManager);
 
-		let localRuntime: AtelierRuntime | undefined;
+		let localRuntime: SidebarRuntime | undefined;
 		let localSidebar: SidebarController | undefined;
 		let localPanelRegistry: SidebarPanelRegistry | undefined;
 		let localCompletionNotifier: CompletionNotifier | undefined;
@@ -667,7 +672,7 @@ export default function atelierExtension(
 					"warning",
 				);
 			}
-			const candidateRuntime = new AtelierRuntime({
+			const candidateRuntime = new SidebarRuntime({
 				pi,
 				ctx: initializationContext,
 				config: loaded.config,
@@ -732,7 +737,7 @@ export default function atelierExtension(
 				panelRegistry: localPanelRegistry,
 				runActivity: localRunActivity,
 				completionNotifier: candidateCompletionNotifier,
-				retiredState: createInertAtelierState(autoCompact),
+				retiredState: createInertSidebarState(autoCompact),
 				retiredConfig: structuredClone(loaded.config),
 				retiredCwd: initializationContext.cwd,
 				overlayCancellations: new Set(),

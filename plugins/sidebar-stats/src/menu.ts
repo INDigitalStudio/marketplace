@@ -29,8 +29,8 @@ import {
 	type OverlaySettlement,
 	type RetirableLifecycleOverlayComponent,
 } from "./overlay-lifecycle.js";
-import type { AtelierRuntime } from "./state.js";
-import type { AtelierConfig, Ornament, SegmentId, TemplateName } from "./types.js";
+import type { SidebarRuntime } from "./state.js";
+import type { SidebarConfig, Ornament, SegmentId, TemplateName } from "./types.js";
 
 export type { OverlayLifetime } from "./overlay-lifecycle.js";
 export type SaveConfig = typeof saveUserConfig;
@@ -133,7 +133,7 @@ export function createMenuActions(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 	runtime: Pick<
-		AtelierRuntime,
+		SidebarRuntime,
 		"getConfig" | "setConfig" | "getDisplaySettings" | "setSessionDisplayPatch" | "refreshUsage"
 	>,
 	userConfigPath: string,
@@ -202,7 +202,7 @@ export function createMenuActions(
 		setPreset(preset: TemplateName): void {
 			runtime.setSessionDisplayPatch(applyDisplayTemplate(preset));
 		},
-		setDensity(density: AtelierConfig["density"]): void {
+		setDensity(density: SidebarConfig["density"]): void {
 			runtime.setSessionDisplayPatch({ density });
 		},
 		setOrnament(ornament: Ornament): void {
@@ -279,7 +279,7 @@ export function createMenuActions(
 			} catch (error) {
 				if (!isActive()) return;
 				notify(
-					`Could not save Atelier settings: ${error instanceof Error ? error.message : String(error)}`,
+					`Could not save Sidebar settings: ${error instanceof Error ? error.message : String(error)}`,
 					"error",
 				);
 			}
@@ -515,14 +515,14 @@ async function showToolSettings(
 }
 
 export interface DisplaySettingsRuntime {
-	getConfig(): AtelierConfig;
+	getConfig(): SidebarConfig;
 	getSidebarPanelSettings(): readonly SidebarPanelSetting[];
-	getDisplaySettings(): ReturnType<AtelierRuntime["getDisplaySettings"]>;
-	getDisplayProvenance(): ReturnType<AtelierRuntime["getDisplayProvenance"]>;
-	getSessionDisplayOverride(): ReturnType<AtelierRuntime["getSessionDisplayOverride"]>;
-	replaceSessionDisplayOverride(value: Parameters<AtelierRuntime["replaceSessionDisplayOverride"]>[0]): void;
+	getDisplaySettings(): ReturnType<SidebarRuntime["getDisplaySettings"]>;
+	getDisplayProvenance(): ReturnType<SidebarRuntime["getDisplayProvenance"]>;
+	getSessionDisplayOverride(): ReturnType<SidebarRuntime["getSessionDisplayOverride"]>;
+	replaceSessionDisplayOverride(value: Parameters<SidebarRuntime["replaceSessionDisplayOverride"]>[0]): void;
 	clearSessionDisplayOverride(): void;
-	applySavedUserDisplayPatch(patch: Parameters<AtelierRuntime["applySavedUserDisplayPatch"]>[0]): void;
+	applySavedUserDisplayPatch(patch: Parameters<SidebarRuntime["applySavedUserDisplayPatch"]>[0]): void;
 }
 
 export async function openDisplaySettingsWorkspace(
@@ -608,10 +608,10 @@ export async function openDisplaySettingsWorkspace(
 	}
 }
 
-export async function openAtelierControlCenter(
+export async function openSidebarControlCenter(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
-	runtime: AtelierRuntime,
+	runtime: SidebarRuntime,
 	userConfigPath: string,
 	sidebar: SidebarControls,
 	requestAllRenders: () => void = () => undefined,
@@ -637,7 +637,7 @@ export async function openAtelierControlCenter(
 		if (!isOverlayLifetimeActive(lifetime)) return;
 		const category = await showSelection(
 			ctx,
-			"◆ Atelier Control Center",
+			"◆ Sidebar Control Center",
 			[
 				{ value: "settings", label: "Settings", description: "Persisted defaults and Display workspace" },
 				{
@@ -827,15 +827,15 @@ export async function openAtelierControlCenter(
 	}
 }
 
-/** @deprecated Use openAtelierControlCenter. */
-export async function openAtelierMenu(
+/** @deprecated Use openSidebarControlCenter. */
+export async function openSidebarMenu(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
-	runtime: AtelierRuntime,
+	runtime: SidebarRuntime,
 	userConfigPath: string,
 	sidebar: SidebarControls,
 	_save: SaveConfig = saveUserConfig,
 	savePatch: SaveConfigPatch = saveUserConfigPatch,
 ): Promise<void> {
-	await openAtelierControlCenter(pi, ctx, runtime, userConfigPath, sidebar, () => undefined, savePatch);
+	await openSidebarControlCenter(pi, ctx, runtime, userConfigPath, sidebar, () => undefined, savePatch);
 }

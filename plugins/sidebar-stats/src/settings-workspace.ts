@@ -14,7 +14,7 @@ import {
 	isSidebarPanelId,
 } from "./sidebar-panels.js";
 import type {
-	AtelierConfig,
+	SidebarConfig,
 	SidebarPanelId,
 	SidebarPanelLayout,
 	DisplayPatch,
@@ -55,7 +55,7 @@ export interface SettingsWorkspaceOptions {
 	clearSessionDisplayOverride(): void;
 	persistUserDisplayPatch(patch: DisplayPatch): Promise<void>;
 	applySavedUserDisplayPatch(patch: DisplayPatch): void;
-	getRenderConfig(): AtelierConfig;
+	getRenderConfig(): SidebarConfig;
 	getPreviewState?(): FooterState;
 	getSidebarPanelLayout?(): readonly SidebarPanelSetting[];
 	getSidebarPreview?(): readonly string[];

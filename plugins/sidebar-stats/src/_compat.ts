@@ -1,5 +1,5 @@
 /**
- * Compatibility layer for sidebar-stats (ported from Pi Atelier by michaelmjhhhh).
+ * Compatibility layer for sidebar-stats (ported from Pi Sidebar by michaelmjhhhh).
  *
  * Re-exports what @oh-my-pi/pi-coding-agent provides, and stubs the symbols
  * it doesn't so the ported source compiles without the original
@@ -22,7 +22,7 @@ export function estimateTokens(text: string): number {
 	return Math.round(text.length / 3.5);
 }
 
-// SettingsManager: atelier calls .create(cwd).getCompactionSettings().enabled
+// SettingsManager: sidebar calls .create(cwd).getCompactionSettings().enabled
 // Safe default — compaction enabled is the normal omp behavior.
 export class SettingsManager {
 	static create(_cwd: string): SettingsManager {
@@ -33,7 +33,7 @@ export class SettingsManager {
 	}
 }
 
-// CustomEditor: base editor class used by AtelierEditor in editor.ts.
+// CustomEditor: base editor class used by SidebarEditor in editor.ts.
 // Publicly exported by @oh-my-pi/pi-coding-agent via src/index.ts:36 → modes/components → custom-editor.
 export { CustomEditor } from "@oh-my-pi/pi-coding-agent";
 // getSettingsListTheme: theme for SettingsList TUI component.

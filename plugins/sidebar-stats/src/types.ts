@@ -101,7 +101,7 @@ export interface DisplayValue {
 	available: boolean;
 }
 
-export interface AtelierConfig extends DisplaySettings {
+export interface SidebarConfig extends DisplaySettings {
 	shortcut: string;
 	contextWarning: number;
 	contextDanger: number;
@@ -115,7 +115,7 @@ export interface AtelierConfig extends DisplaySettings {
 	completionNotifications: boolean;
 }
 
-export interface AtelierMetrics {
+export interface SidebarMetrics {
 	usageAvailable: boolean;
 	costAvailable: boolean;
 	input: number;
@@ -136,7 +136,7 @@ export type WorkspacePulseState =
 	| { status: "clean" | "changed" | "conflict" | "stale"; data: WorkspacePulseData }
 	| { status: "not-repo" | "unavailable" };
 
-export interface AtelierState {
+export interface SidebarState {
 	activity: ActivityState;
 	workingLabel?: string;
 	modelId?: string;
@@ -145,16 +145,16 @@ export interface AtelierState {
 	branch?: string;
 	dirty: boolean;
 	workspacePulse: WorkspacePulseState;
-	metrics: AtelierMetrics;
+	metrics: SidebarMetrics;
 	extensionStatuses: readonly string[];
 }
 
 /** Footer render input: runtime state plus the live response metrics the runtime does not own. */
-export interface FooterState extends AtelierState {
+export interface FooterState extends SidebarState {
 	performance?: ResponsePerformance;
 }
 
-export const DEFAULT_CONFIG: AtelierConfig = {
+export const DEFAULT_CONFIG: SidebarConfig = {
 	preset: "editorial",
 	shortcut: "alt+a",
 	segmentLayout: [

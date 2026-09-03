@@ -5,8 +5,8 @@ import { resolveDisplayLayers } from "./config.js";
 import { aggregateMetrics, type UsageMessage } from "./metrics.js";
 import type {
 	ActivityState,
-	AtelierConfig,
-	AtelierState,
+	SidebarConfig,
+	SidebarState,
 	DisplayLayerState,
 	DisplayPatch,
 	DisplayProvenance,
@@ -32,7 +32,7 @@ const SESSION_DISPLAY_OVERRIDE_KEYS = [
 export interface RuntimeDependencies {
 	pi: ExtensionAPI;
 	ctx: ExtensionContext;
-	config: AtelierConfig;
+	config: SidebarConfig;
 	displayLayers?: DisplayLayerState;
 	displayProvenance?: DisplayProvenance;
 	autoCompact: boolean | null;
@@ -41,7 +41,7 @@ export interface RuntimeDependencies {
 	inspectWorkspace?(): Promise<WorkspacePulseInspection>;
 }
 
-export function createInertAtelierState(autoCompact: boolean | null = null): AtelierState {
+export function createInertSidebarState(autoCompact: boolean | null = null): SidebarState {
 	return {
 		activity: "ready",
 		dirty: false,
@@ -51,19 +51,19 @@ export function createInertAtelierState(autoCompact: boolean | null = null): Ate
 	};
 }
 
-export class AtelierRuntime {
+export class SidebarRuntime {
 	readonly #pi: ExtensionAPI;
 	readonly #ctx: ExtensionContext;
 	readonly #autoCompact: boolean | null;
 	readonly #random: () => number;
 	readonly #requestRender: () => void;
 	readonly #workspacePulseRefresh: WorkspacePulseRefresh;
-	#config: AtelierConfig;
+	#config: SidebarConfig;
 	#displayLayers: DisplayLayerState;
 	#displayProvenance: DisplayProvenance;
 	#disposed = false;
 	#lastWorkspaceData: WorkspacePulseData | undefined;
-	#state: AtelierState;
+	#state: SidebarState;
 
 	constructor(dependencies: RuntimeDependencies) {
 		this.#pi = dependencies.pi;
@@ -99,9 +99,9 @@ export class AtelierRuntime {
 	}
 
 	/** State with no branch, workspace data, or usage history; context is included only when explicit. */
-	#inertState(context: ReturnType<ExtensionContext["getContextUsage"]> = undefined): AtelierState {
+	#inertState(context: ReturnType<ExtensionContext["getContextUsage"]> = undefined): SidebarState {
 		return {
-			...createInertAtelierState(this.#autoCompact),
+		...createInertSidebarState(this.#autoCompact),
 			workspacePulse: { status: "inspecting" },
 			metrics: aggregateMetrics([], {
 				subscription: false,
@@ -111,15 +111,15 @@ export class AtelierRuntime {
 		};
 	}
 
-	getState(): AtelierState {
+	getState(): SidebarState {
 		return this.#state;
 	}
 
-	getConfig(): AtelierConfig {
+	getConfig(): SidebarConfig {
 		return this.#config;
 	}
 
-	getSidebarPanelLayout(): AtelierConfig["sidebarPanelLayout"] {
+	getSidebarPanelLayout(): SidebarConfig["sidebarPanelLayout"] {
 		return this.#config.sidebarPanelLayout.map((entry) => ({ ...entry }));
 	}
 
@@ -215,7 +215,7 @@ export class AtelierRuntime {
 		this.#invalidate();
 	}
 
-	setConfig(config: AtelierConfig): void {
+	setConfig(config: SidebarConfig): void {
 		this.#config = config;
 		this.#invalidate();
 	}
@@ -315,7 +315,7 @@ export class AtelierRuntime {
 		this.#state = { ...this.#inertState(), workspacePulse: { status: "unavailable" } };
 	}
 
-	#replaceState(next: AtelierState): void {
+	#replaceState(next: SidebarState): void {
 		if (isDeepStrictEqual(this.#state, next)) return;
 		this.#state = next;
 		this.#invalidate();

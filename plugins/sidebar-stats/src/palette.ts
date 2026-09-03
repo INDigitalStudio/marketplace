@@ -72,7 +72,7 @@ const NO_COLOR: Record<PaletteRole, string> = {
 	error: "error",
 };
 
-export interface AtelierPalette {
+export interface SidebarPalette {
 	paint(role: PaletteRole, text: string): string;
 }
 
@@ -80,7 +80,7 @@ function rgb([red, green, blue]: Rgb, text: string): string {
 	return `\u001b[38;2;${red};${green};${blue}m${text}\u001b[39m`;
 }
 
-export function createPalette(theme: PaletteTheme, colorEnabled: boolean): AtelierPalette {
+export function createPalette(theme: PaletteTheme, colorEnabled: boolean): SidebarPalette {
 	return {
 		paint(role, text) {
 			if (!colorEnabled) return theme.fg(NO_COLOR[role], text);

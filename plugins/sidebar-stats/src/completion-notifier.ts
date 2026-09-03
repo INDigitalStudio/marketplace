@@ -48,8 +48,8 @@ const WINDOWS_TOAST_SCRIPT = [
 	"$template = [Windows.UI.Notifications.ToastTemplateType]::ToastText02",
 	"$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent($template)",
 	"$texts = $xml.GetElementsByTagName('text')",
-	"$texts.Item(0).AppendChild($xml.CreateTextNode($env:PI_ATELIER_NOTIFICATION_TITLE)) > $null",
-	"$texts.Item(1).AppendChild($xml.CreateTextNode($env:PI_ATELIER_NOTIFICATION_BODY)) > $null",
+	"$texts.Item(0).AppendChild($xml.CreateTextNode($env:PI_SIDEBAR_NOTIFICATION_TITLE)) > $null",
+	"$texts.Item(1).AppendChild($xml.CreateTextNode($env:PI_SIDEBAR_NOTIFICATION_BODY)) > $null",
 	"$toast = [Windows.UI.Notifications.ToastNotification]::new($xml)",
 	"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Sidebar Stats').Show($toast)",
 ].join("; ");
@@ -141,8 +141,8 @@ function deliverSystemNotification(
 			{
 				env: {
 					...process.env,
-					PI_ATELIER_NOTIFICATION_TITLE: title,
-					PI_ATELIER_NOTIFICATION_BODY: body,
+					PI_SIDEBAR_NOTIFICATION_TITLE: title,
+					PI_SIDEBAR_NOTIFICATION_BODY: body,
 				},
 				windowsHide: true,
 			},
