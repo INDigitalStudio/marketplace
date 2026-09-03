@@ -545,15 +545,15 @@ export default function sidebarStatsExtension(
 				await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
 				return;
 			}
-			if (
-				extra.length > 0 ||
-				(sidebarAction !== undefined && sidebarAction !== "on" && sidebarAction !== "off")
-			) {
-				ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
-				return;
-			}
-			ctx.ui.notify("Sidebar toggle is unavailable in omp (TUI overlay captures keyboard). Use /sidebar-stats status for info.", "info");
+		const current = getActiveSession(ctx);
+		if (!current) {
+			ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
 			return;
+		}
+		if (sidebarAction === "on") current.sidebar.show();
+		else if (sidebarAction === "off") current.sidebar.hide();
+		else current.sidebar.toggle();
+		return;
 		}
 		if (action === "disable") {
 			const current = getActiveSession(ctx);
@@ -592,8 +592,14 @@ export default function sidebarStatsExtension(
 			);
 			return;
 		}
+		const current = getActiveSession(ctx);
+		if (!current) {
+			ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+			return;
+		}
+		current.sidebar.toggle();
 		ctx.ui.notify(
-			"Sidebar Stats commands: status, enable, disable, sidebar tools [on|off]", "info",
+			current.sidebar.isVisible() ? "Sidebar shown" : "Sidebar hidden", "info",
 		);
 	};
 
