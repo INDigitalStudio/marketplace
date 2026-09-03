@@ -44,7 +44,7 @@
     },
     {
       "name": "sidebar-stats",
-      "description": "Responsive status rail and activity sidebar — adapted from Pi Atelier by michaelmjhhhh. Live agent, tool, context, workspace, usage, and TODO telemetry.",
+      "description": "Responsive status rail and activity sidebar — adapted from Pi Sidebar by michaelmjhhhh. Live agent, tool, context, workspace, usage, and TODO telemetry.",
       "source": "./plugins/sidebar-stats",
       "version": "0.10.4",
       "category": "productivity"

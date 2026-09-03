@@ -15,8 +15,7 @@ import {
 	type SpawnNotificationProcess,
 } from "./completion-notifier.js";
 import { loadConfig, type saveUserConfig, saveUserConfigPatch } from "./config.js";
-import { SidebarEditor } from "./editor.js";
-import { createFooterComponent, type ThemeLike } from "./footer.js";
+// SidebarEditor and createFooterComponent disabled — footer/editor conflict with omp input row.
 import {
 	type DisplaySettingsRuntime,
 	type OverlayLifetime,

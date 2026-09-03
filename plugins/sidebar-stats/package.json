@@ -3,13 +3,18 @@
   "version": "0.10.4",
   "type": "module",
   "pi": {
-    "extensions": ["./index.js"]
+    "extensions": [
+      "./index.js"
+    ]
   },
   "dependencies": {
-    "jiti": "^2.7.0",
     "@earendil-works/pi-tui": "^0.84.3",
-    "@oh-my-pi/pi-coding-agent": "^18.0.4"
+    "@oh-my-pi/pi-coding-agent": "^18.0.4",
+    "jiti": "^2.7.0"
   },
   "license": "MIT",
-  "author": "michaelmjhhhh (original), Indigital Studio (omp adaptation)"
+  "author": "michaelmjhhhh (original), Indigital Studio (omp adaptation)",
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
 }
