@@ -1,0 +1,14 @@
+{
+  "name": "indigitalstudio-marketplace",
+  "private": true,
+  "workspaces": [
+    "plugins/*"
+  ],
+  "scripts": {
+    "changeset": "changeset",
+    "version": "changeset version && bun scripts/sync-marketplace-versions.ts"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.12"
+  }
+}
