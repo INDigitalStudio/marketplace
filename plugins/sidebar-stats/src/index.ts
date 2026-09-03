@@ -575,80 +575,105 @@ export default function atelierExtension(
 		}
 	}
 
-	pi.registerCommand("sidebar-stats", {
-		description: "Open or control the Sidebar Stats status menu",
-		handler: async (args, ctx) => {
-			const parts = args.trim().toLowerCase().split(/\s+/).filter(Boolean);
-			const [action, sidebarAction, ...extra] = parts;
-			if (action === "display") {
-				if (sidebarAction !== undefined || extra.length > 0) {
-					ctx.ui.notify("Usage: /sidebar-stats display", "warning");
-					return;
-				}
-				await openDisplay(ctx);
+	const commandHandler = async (args: string, ctx: any): Promise<void> => {
+		const parts = args.trim().toLowerCase().split(/\s+/).filter(Boolean);
+		const [action, sidebarAction, ...extra] = parts;
+		if (action === "display") {
+			if (sidebarAction !== undefined || extra.length > 0) {
+				ctx.ui.notify("Usage: /sidebar-stats display", "warning");
 				return;
 			}
-			if (action === "sidebar") {
-				if (ctx.mode !== "tui") {
-					ctx.ui.notify("Sidebar Stats sidebar requires TUI mode", "warning");
-					return;
-				}
-				const current = getActiveSession(ctx);
-				if (!current) {
-					ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-					return;
-				}
-				if (sidebarAction === "tools") {
-					const [toolAction, ...toolExtra] = extra;
-					if (
-						toolExtra.length > 0 ||
-						(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
-					) {
-						ctx.ui.notify("Usage: /sidebar-stats sidebar tools [on|off]", "warning");
-						return;
-					}
-					await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
-					return;
-				}
+			await openDisplay(ctx);
+			return;
+		}
+		if (action === "sidebar") {
+			if (ctx.mode !== "tui") {
+				ctx.ui.notify("Sidebar Stats sidebar requires TUI mode", "warning");
+				return;
+			}
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			if (sidebarAction === "tools") {
+				const [toolAction, ...toolExtra] = extra;
 				if (
-					extra.length > 0 ||
-					(sidebarAction !== undefined && sidebarAction !== "on" && sidebarAction !== "off")
+					toolExtra.length > 0 ||
+					(toolAction !== undefined && toolAction !== "on" && toolAction !== "off")
 				) {
-					ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
+					ctx.ui.notify("Usage: /sidebar-stats sidebar tools [on|off]", "warning");
 					return;
 				}
-				if (sidebarAction === "on") current.sidebar.show();
-				else if (sidebarAction === "off") current.sidebar.hide();
-				else current.sidebar.toggle();
+				await setSidebarToolNames(ctx, toolAction === undefined ? undefined : toolAction === "on", current);
 				return;
 			}
-			if (action === "disable") {
-				const current = getActiveSession(ctx);
-				if (!current) {
-					ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-					return;
-				}
-				enabled = false;
-				current.sidebar.hide();
-				updateExtensionStatuses(current, []);
-				clearFooter(current, true);
-				ctx.ui.notify("Sidebar Stats disabled", "info");
+			if (
+				extra.length > 0 ||
+				(sidebarAction !== undefined && sidebarAction !== "on" && sidebarAction !== "off")
+			) {
+				ctx.ui.notify("Usage: /sidebar-stats sidebar [on|off]", "warning");
 				return;
 			}
-			if (action === "enable") {
-				const current = getActiveSession(ctx);
-				if (!current) {
-					ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
-					return;
-				}
-				enabled = true;
-				installFooter(current);
-				ctx.ui.notify("Sidebar Stats enabled", "info");
+			if (sidebarAction === "on") current.sidebar.show();
+			else if (sidebarAction === "off") current.sidebar.hide();
+			else current.sidebar.toggle();
+			return;
+		}
+		if (action === "disable") {
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
 				return;
 			}
-			await openMenu(ctx);
-		},
+			enabled = false;
+			current.sidebar.hide();
+			updateExtensionStatuses(current, []);
+			clearFooter(current, true);
+			ctx.ui.notify("Sidebar Stats disabled", "info");
+			return;
+		}
+		if (action === "enable") {
+			const current = getActiveSession(ctx);
+			if (!current) {
+				ctx.ui.notify("Sidebar Stats is not active in this session", "warning");
+				return;
+			}
+			enabled = true;
+			installFooter(current);
+			ctx.ui.notify("Sidebar Stats enabled", "info");
+			return;
+		}
+		await openMenu(ctx);
+	};
+
+	pi.registerCommand?.("sidebar-stats", {
+		description: "Open or control the Sidebar Stats status menu",
+		handler: commandHandler,
 	});
+
+	// Fallback: if registerCommand is unavailable, intercept input events directly
+	if (typeof pi.on === "function") {
+		pi.on("input", async (event, ctx) => {
+			const text = (event as { text?: unknown } | undefined)?.text;
+			if (typeof text !== "string") return undefined;
+			const trimmed = text.trim();
+			if (!trimmed.startsWith("/")) return undefined;
+			const firstSpace = trimmed.indexOf(" ");
+			const name = firstSpace === -1 ? trimmed.slice(1) : trimmed.slice(1, firstSpace);
+			if (name !== "sidebar-stats") return undefined;
+			const args = firstSpace === -1 ? "" : trimmed.slice(firstSpace + 1);
+			const commandCtx = ctx;
+			try {
+				await commandHandler(args, commandCtx);
+			} catch (err) {
+				if (commandCtx.hasUI === false) throw err;
+				const message = err instanceof Error ? err.message : String(err);
+				commandCtx.ui.notify(`/sidebar-stats failed: ${message}`, "error");
+			}
+			return undefined;
+		});
+	}
 
 	pi.on("session_start", async (_event, ctx) => {
 		const initializationContext = ctx;
